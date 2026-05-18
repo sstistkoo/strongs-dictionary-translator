@@ -1,0 +1,226 @@
+SEZNAM ŠPATNÝCH PŘEKLADŮ – Angličtina → Čeština
+================================================
+
+Tento seznam obsahuje anglická slova, která jsou často špatně přeložena do češtiny,
+společně s doporučenými českými ekvivalenty a vysvětlením.
+
+Použití: Tento seznam slouží jako reference pro překladatele Bible a dalších textů,
+zajišťuje konzistenci a přesnost překladu.
+
+
+1. sin → hřích
+   Pozn.: Nepřekládat jako 'hriech' (sk) ani 'grzech' (pl). V křesťanském kontextu vždy 'hřích'.
+
+2. grace → milost
+   Pozn.: Teologický pojem, ne 'grâce' (fr) ani 'Gnad' (de). Divine grace = božská milost.
+
+3. faith → víra
+   Pozn.: Nepřekládat jako 'dôvera' (sk) či 'fede' (it). Saving faith = spasitelná víra.
+
+4. righteousness → spravedlnost
+   Pozn.: Ne 'pravost' (příliš obecné). V biblickém kontextu 'spravedlnost' (Boží spravedlnost).
+
+5. salvation → spasení
+   Pozn.: Ne 'zachránění' ve fyzickém smyslu. Eternal salvation = věčné spasení.
+
+6. wrong → špatný / špatně / křivda
+   Pozn.: Podle kontextu: adj./adv./noun. 'to do wrong' = jednat špatně / křivdit.
+
+7. bad → špatný
+   Pozn.: Méně silné než 'zlý'. 'bad fruit' = špatný ovoce, ne 'zlý plod' (příliš silné).
+
+8. incorrect → nesprávný
+   Pozn.: Formální, ne 'špatný' v každodenní mluvě. 'Incorrect answer' = nesprávná odpověď.
+
+9. false → nepravdivý / falešný
+   Pozn.: 'false witness' = křivé svědectví; 'false god' = falešný bůh; 'false prophet' = falešný prorok.
+
+10. evil → zlý
+    Pozn.: Silnější než 'bad', morální zlo. 'evil one' = ten zlý (ďábel); 'evil deed' = zlý čin.
+
+11. iniquity → nevěra / nepravost / bezpráví
+    Pozn.: KJV: 'iniquity' = nepravost, zkaženost. NEPřekládat 'nepravda'.
+
+12. transgression → přestoupení / vpád
+    Pozn.: Přečinění zákona, 'transgression of the law' = přestoupení zákona.
+
+13. trespass → přestupek / provinění
+    Pozn.: V NT často 'provinění' nebo 'přestupek'. 'trespass against' = provinění proti.
+
+14. blasphemy → rouhání
+    Pozn.: Ne 'blasfémie' (přímo z fr.) ani 'blasfemie'. 'blasphemy against the Spirit' = rouhání proti Duchu.
+
+15. fornication → smilstvo
+    Pozn.: Sexuální hřích, ne 'prostituce' (to je 'harlotry'). 'Flee fornication' = utíkej před smilstvem.
+
+16. adultery → cizoložství
+    Pozn.: Rozlišit od 'fornication' (smilstvo). Adultery involves married person.
+
+17. idolatry → modlářství
+    Pozn.: Ne 'idololatria' (lat.). Idolatry = uctívání obrazů, modlářství.
+
+18. sorcery → kouzelnictví
+    Pozn.: V NT 'kouzelnictví' (Gal 5:20). Sorcery = magie, čarování, kouzelnictví.
+
+19. witchcraft → čarodějnictví
+    Pozn.: Rozlišit od 'sorcery'. Witchcraft = čarodějnictví, okresání ďábelskými silami.
+
+20. repentance → kajícné smýšlení / obrácení
+    Pozn.: V NT 'kajícné smýšlení' nebo 'obrácení' (Gr. metanoia). Ne 'lítost'.
+
+21. remission → odpuštění
+    Pozn.: 'Remission of sins' = odpuštění hříchů. Ne 'remise' (finanční termín).
+
+22. justified → ospravedlněn
+    Pozn.: 'Justified by faith' = ospravedlněn vírou. Justification = ospravedlnění.
+
+23. sanctified → posvěcen
+    Pozn.: Nepřidávat 'posvěcený' (přídavné jméno), ale 'posvěcen' (sloveso). 'Sanctified by God' = posvěcen Bohem.
+
+24. holy → svatý
+    Pozn.: 'Holy Spirit' = Duch svatý. Nepřekládat jako 'sacred' (což je 'posvěcený' předmět).
+
+25. sacred → posvěcený
+    Pozn.: 'Sacred thing' = posvěcená věc (např. chléb). 'Holy' = svatý (Bůh, Duch, místo).
+
+26. immediately → ihned / okamžitě
+    Pozn.: V NT často 'ihned' (Mark 1:20). 'Straightway' = také 'ihned'.
+
+27. straightway → ihned
+    Pozn.: KJV slovo, překládat jako 'ihned', ne 'přímo cestou'.
+
+28. anon → ihned
+    Pozn.: Archaismus z KJV, překládat 'ihned'. Ne 'anonymous'.
+
+29. by and by → brzy / časem
+    Pozn.: KJV idiomatické, překládat podle kontextu 'časem' nebo 'brzy'.
+
+30. the → (člen se často vynechá)
+    Pozn.: Člen v češtině není vždy nutný. 'the law' = zákon (bez členu).
+
+31. a/an → (člen se přidává jen pokud je nutný)
+    Pozn.: 'a man' = člověk; ale 'Son of Man' = Syn člověka (bez členu).
+
+32. and → a
+    Pozn.: Spojka 'a', ne 'a a', 'a jaký'.
+
+33. but → ale
+    Pozn.: Spojka 'ale', ne 'but' (přímo z EN).
+
+34. or → nebo
+    Pozn.: 'either... or' = buď... nebo. Ne 'or' (přímo).
+
+35. for → neboť / protože
+    Pozn.: KJV 'for' = 'neboť' (důvod). 'For God so loved' = 'Neboť takmiloval Bůh'.
+
+36. to know → vědět / poznat
+    Pozn.: 'to know the Lord' = poznat Pána; 'to know someone' = znát (osobu).
+
+37. to heed → dát si pozor / dbát
+    Pozn.: 'Heed the warning' = dbát na varování. Ne 'heed' přímo.
+
+38. to tarry → pozdržet se / zůstat
+    Pozn.: KJV 'tarry' = 'pozdržet se'. 'Tarry here' = zůstaň zde.
+
+39. to wit → totiž / jmenovitě
+    Pozn.: KJV 'to wit' = 'jmenovitě', 'totiž'. Ne 'witness'.
+
+40. to suffer → trpět / dopustit
+    Pozn.: 'Suffer the little children' = Dopusť dítky; 'suffer evil' = trpět zlom.
+
+41. to let → dovolit / nechť
+    Pozn.: 'Let there be light' = Buď svět! (příkaz). Ne 'nechat'.
+
+42. elect → vyvolený
+    Pozn.: 'The elect' = vyvolení (ne 'voliči').
+
+43. chosen → vybraný / vyvolený
+    Pozn.: Podle kontextu: 'chosen people' = vyvolený lid; 'chosen instrument' = vybraný nástroj.
+
+44. quick → živý
+    Pozn.: 'Quickened' = prožitý, 'živý' (ne 'rychlé'). 'The quick and the dead' = živí i mrtví.
+
+45. carnal → tělesný / telesný
+    Pozn.: 'Carnal mind' = myšlení tělesné, ne 'cars/care'.
+
+46. spiritual → duchovní
+    Pozn.: Nepřekládat jako 'spirituální' (zmatek se 'spirits' = duchové).
+
+47. natural → přirozený / přírodní
+    Pozn.: 'Natural man' = přirozený člověk, ne 'normální'.
+
+48. spoil → kořist / zkazit
+    Pozn.: 'Spoil the Egyptians' = kořist z Egypťanů; 'spoil a child' = zkazit dítě.
+
+49. wherefore → proč / proto
+    Pozn.: 'Wherefore?' = proč? 'Wherefore' = proto (důsledek).
+
+50. therefore → proto
+    Pozn.: Nepoužívat 'therefore' jako 'protože' (to je 'because').
+
+51. verily →pravděpodobně / věru
+    Pozn.: KJV 'verily' = 'pravděpodobně' nebo 'věru' (=ámen).
+
+52. behold → hle / jestliže
+    Pozn.: 'Behold!' = Hle!; 'Behold, I say' = hle, pravím.
+
+53. lo → hle
+    Pozn.: KJV archaismus: 'lo' = 'hle', ne 'low'.
+
+54. twofold → dvojí / dvakrát
+    Pozn.: 'Twofold meaning' = dvojí význam, ne 'dvojnásobný'.
+
+55. threefold → trojí
+    Pozn.: 'Threefold cord' = trojí lano, ne 'trojnásobný'.
+
+56. to be born again → zrodit se znovu / znovuzrodit
+    Pozn.: 'Born again' = znovuzrozený. Ne 'zrození znovu'.
+
+57. to arise → povstat / vstát
+    Pozn.: 'Arise, shine' = povstaň, svítí. Ne 'vstát' jako 'stand up'.
+
+58. to flesh → tělem / ztělesnit
+    Pozn.: 'Made flesh' = učiněn tělem (Jan 1:14). Ne 'maso'.
+
+59. the flesh → tělo / tělesnost
+    Pozn.: 'The flesh' = tělo (vzhůru k hříchu). Ne 'maso' jako jídlo.
+
+60. to fulfill → naplnit / splnit
+    Pozn.: 'Fulfill the law' = naplnit zákon. Ne 'vyplnit' (nepřesné).
+
+61. to establish → zřídit / upevnit
+    Pozn.: 'Establish the throne' = zřídit trůn. Ne 'založit' (to je 'found').
+
+62. to access → přistupovat / přístup
+    Pozn.: 'Access to the Father' = přístup k Otci. Ne 'přístup' přímo z EN.
+
+63. to challenge → vyslovit výzvu / napadnout
+    Pozn.: 'Challenge someone' = napadnout někoho. Ne 'chalenge'.
+
+64. to manifest → projevit / zjeviti
+    Pozn.: 'Manifest the glory' = projevit slávu. Ne 'manifest' přímo.
+
+65. to project → promítat / předpokládat
+    Pozn.: 'Project oneself' = promítat se. V relig. kontextu nepoužívat 'project' přímo.
+
+66. to resent → trpět / mstít se
+    Pozn.: 'To resent' = trpět (negativní pocity), mstít se. Ne 'resign'.
+
+67. energy → energie / síla
+    Pozn.: V Nouvo kontextu 'síla', ne 'energy' jako New Age pojem.
+
+68. vibration → vibrace / chvění
+    Pozn.: New Age pojem, preferovat 'chvění' nebo 'vzetí'.
+
+69. chakra → čakra
+    Pozn.: Převzato z sanskrtu; v biblickém kontextu nepoužívat.
+
+70. karma → karma
+    Pozn.: Převzato z hinduismu; nepřidávat do překladu Bible.
+
+71. nirvana → nirvána
+    Pozn.: Buddhistický termín, nepřidávat do křesťanského překladu.
+
+================================================
+KONEC SEZNAMU
+================================================
