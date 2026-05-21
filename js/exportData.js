@@ -19,6 +19,13 @@ export function createExportApi({ state, t, showToast }) {
     return String(localStorage.getItem('strong_source_lang') || 'gr').toLowerCase();
   }
 
+  function matchesSourceLang(e) {
+    const src = getSourceLangCode();
+    const includeG = src === 'gr' || src === 'both';
+    const includeH = src === 'he' || src === 'both';
+    return (includeG && e.key.startsWith('G')) || (includeH && e.key.startsWith('H'));
+  }
+
   function download(name, content, type) {
     const blob = new Blob([content], { type });
     const a = document.createElement('a');
@@ -29,6 +36,7 @@ export function createExportApi({ state, t, showToast }) {
 
   function exportTXT() {
     const done = state.entries.filter(e => {
+      if (!matchesSourceLang(e)) return false;
       const tr = state.translated[e.key];
       return tr && tr.vyznam && tr.vyznam !== '—' && !tr.skipped;
     });
@@ -60,6 +68,7 @@ export function createExportApi({ state, t, showToast }) {
   function exportJSON() {
     const out = {};
     for (const e of state.entries) {
+      if (!matchesSourceLang(e)) continue;
       if (!state.translated[e.key]) continue;
       out[e.key] = { greek: e.greek, ...state.translated[e.key] };
     }
@@ -73,6 +82,7 @@ export function createExportApi({ state, t, showToast }) {
     if (Number.isNaN(from) || Number.isNaN(to)) return;
 
     const done = state.entries.filter(e => {
+      if (!matchesSourceLang(e)) return false;
       const n = parseInt(e.key.slice(1), 10);
       const tr = state.translated[e.key];
       return n >= from && n <= to && tr && tr.vyznam && tr.vyznam !== '—' && !tr.skipped;
@@ -154,6 +164,7 @@ async function exportAllLocalStorage() {
       console.groupEnd();
       
       const done = state.entries.filter(e => {
+        if (!matchesSourceLang(e)) return false;
         const tr = state.translated[e.key];
         // Přijmi jako přeložený pokud existuje záznam a není přeskořen
         // (vyznam může být prázdný při importu z TXT)
