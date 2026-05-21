@@ -52,6 +52,9 @@ export function createAutoApi(deps) {
     const autoInterval = document.getElementById('autoInterval');
     if (autoInterval) autoInterval.textContent = String(state.currentInterval);
     startAutoProviderCountdownTicker();
+    if (typeof window !== 'undefined' && window.resetProviderReqCounts) {
+      window.resetProviderReqCounts();
+    }
     if (isAutoTokenLimitReached()) {
       stopAuto();
       showToast(t('toast.auto.notStartedTokenLimit'));
@@ -223,11 +226,6 @@ export function createAutoApi(deps) {
         startElapsedTimer();
       }
 
-      // Reset počítadel requestů při novém kole překladu
-      if (typeof window !== 'undefined' && window.resetProviderReqCounts) {
-        window.resetProviderReqCounts();
-      }
-
       log('Paralelní překlad: ' + activeProviders.join(', ') + ' (dávka ' + batchSize + ')');
       updateETA();
 
@@ -377,11 +375,6 @@ export function createAutoApi(deps) {
       if (!state.startTime) {
         state.startTime = Date.now();
         startElapsedTimer();
-      }
-
-      // Reset počítadel requestů při novém startu sequential
-      if (typeof window !== 'undefined' && window.resetProviderReqCounts) {
-        window.resetProviderReqCounts();
       }
 
       // Inicializace per-provider cooldown timestamps
@@ -548,6 +541,9 @@ export function createAutoApi(deps) {
       startElapsedTimer();
     }
     startAutoProviderCountdownTicker();
+    if (typeof window !== 'undefined' && window.resetProviderReqCounts) {
+      window.resetProviderReqCounts();
+    }
     setTimeout(() => {
       if (state.autoSeqRunning && !state.autoStepRunning) runSequentialStep();
     }, 50);
