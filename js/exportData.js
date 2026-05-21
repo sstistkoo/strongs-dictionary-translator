@@ -1,10 +1,9 @@
 export function createExportApi({ state, t, showToast }) {
-  function getUiTag() {
-    const ui = String(localStorage.getItem('strong_ui_lang') || 'cs').toLowerCase();
-    if (ui === 'en') return 'EN';
-    if (ui === 'sk') return 'SK';
-    if (ui === 'pl') return 'PL';
-    return 'CZ';
+  // Vrátí tag pro označení polí v exportu podle nastaveného cílového jazyka (např. "SK", "EN", "zh-CN")
+  function getContentTag() {
+    const lang = getTargetLangCode();
+    if (lang === 'zh-cn') return 'zh-CN';
+    return lang.toUpperCase();
   }
 
   // Vrátí kód cílového jazyka pro název souboru (např. "cz", "sk", "pl", "en", "bg"...)
@@ -47,7 +46,7 @@ export function createExportApi({ state, t, showToast }) {
 
     const lines = done.map(e => {
       const tr = state.translated[e.key];
-      const langTag = getUiTag();
+      const langTag = getContentTag();
       return [
         `${e.key} | ${e.greek}`,
         `${t('export.field.grammar')}: ${e.tvaroslovi || '—'}`,
@@ -94,7 +93,7 @@ export function createExportApi({ state, t, showToast }) {
 
     const lines = done.map(e => {
       const tr = state.translated[e.key];
-      const langTag = getUiTag();
+      const langTag = getContentTag();
       return [
         `${e.key} | ${e.greek}`,
         `${t('export.field.meaning', { lang: langTag })}: ${tr.vyznam || '—'}`,
@@ -121,7 +120,7 @@ async function exportAllLocalStorage() {
       }
       
       // Exportuje všechna přeložená hesla z aktuálně načteného souboru (state.entries + state.translated)
-      const langTag = getUiTag();
+      const langTag = getContentTag();
       
       // DEBUG: Analýza state.translated vs state.entries
       const translatedKeys = Object.keys(state.translated);
