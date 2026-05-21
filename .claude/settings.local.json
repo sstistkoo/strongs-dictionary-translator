@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\Kristus\\\\strong_translate | Where-Object { $_.Name -ne \".kilo\" } | Select-Object Name, LastWriteTime)",
+      "Read(//mnt/c/Users/stistko/CascadeProjects/Kristus/**)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\Kristus\\\\strong_translate\" -Recurse -File -Filter \"*.js\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(Find \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\Kristus\\\\strong_translate\" -name \"*.js\" -path \"*/strong_translator*\")"
+    ]
+  }
+}
