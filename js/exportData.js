@@ -180,7 +180,7 @@ const lines = done.map(e => {
         return [
           `${e.key} | ${e.greek}`,
           `${t('export.field.meaning', { lang: langTag })}: ${tr.vyznam || '—'}`,
-          `${t('export.field.definitionEn')}: ${tr.def || '—'}`,
+          `${t('export.field.definitionEn')}: ${e.def || e.definice || tr.def || '—'}`,
           `${t('export.field.definition', { lang: langTag })}: ${deduplicateText(tr.definice) || '—'}`,
           `${t('export.field.kjv', { lang: langTag })}: ${deduplicateText(tr.kjv) || '—'}`,
           `${t('export.field.origin')}: ${deduplicateText(tr.puvod) || '—'}`,

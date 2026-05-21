@@ -789,7 +789,7 @@ if (missingKeys.length > 0) {
         if (keysBeforeSideFallback.length > 0) {
            // Spustit Gemini paraleln? (background, ne?ekat)
           if (isPipelineSecondaryEnabled('gemini')) {
-            runGeminiTopicRotationFallback(keysBeforeSideFallback).catch(err => {
+            runGeminiTopicRotationFallback(keysBeforeSideFallback, state.sideFallbackAbortVersion).catch(err => {
               logError('GeminiRotation', err, { keys: keysBeforeSideFallback });
             });
           }
