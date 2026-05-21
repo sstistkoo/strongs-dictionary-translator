@@ -5207,25 +5207,27 @@ function mirrorAutoLog() {
   dst.textContent = src.textContent;
 }
 
-// Zkontrolovat provider limity při každém překladu
-window.checkProviderRequestLimit = function(prov) {
-  const limits = getProviderLimits();
-  const reqLimit = limits[prov]?.reqs;
-  if (!reqLimit || reqLimit <= 0) return false;
-  const key = 'provider_req_count_' + prov;
-  const count = parseInt(sessionStorage.getItem(key) || '0', 10);
-  return count >= reqLimit;
-};
+// Req count — localStorage s denním resetem
+function _provReqKey(prov) { return 'provider_req_count_' + prov; }
+function _todayStr() { return new Date().toISOString().slice(0, 10); }
 
-window.incrementProviderReqCount = function(prov) {
-  const key = 'provider_req_count_' + prov;
-  const count = parseInt(sessionStorage.getItem(key) || '0', 10) + 1;
-  sessionStorage.setItem(key, String(count));
+function _getProvReqCount(prov) {
+  try {
+    const raw = localStorage.getItem(_provReqKey(prov));
+    if (!raw) return 0;
+    const data = JSON.parse(raw);
+    return data.date === _todayStr() ? (data.count || 0) : 0;
+  } catch { return 0; }
+}
+
+function _setProvReqCount(prov, count) {
+  localStorage.setItem(_provReqKey(prov), JSON.stringify({ count, date: _todayStr() }));
+}
+
+function _updateProvReqUI(prov, count) {
   const limits = getProviderLimits();
   const limit = limits[prov]?.reqs;
   const limitReached = limit && count >= limit;
-
-  // Zobrazit počítadlo pro každý provider
   const reqCountElId = { groq: 'groqReqCount', gemini: 'geminiReqCount', openrouter: 'orReqCount' }[prov];
   if (reqCountElId) {
     const el = document.getElementById(reqCountElId);
@@ -5234,8 +5236,6 @@ window.incrementProviderReqCount = function(prov) {
       el.style.color = limitReached ? 'var(--err, #ff4444)' : '';
     }
   }
-
-  // Při dosažení limitu - zastavit countdown a zobrazit stav
   if (limitReached) {
     const label = { groq: 'Groq', gemini: 'Gemini', openrouter: 'OpenRouter' }[prov] || prov;
     const countdownEl = document.getElementById('autoCountdown_' + prov);
@@ -5244,11 +5244,26 @@ window.incrementProviderReqCount = function(prov) {
       countdownEl.style.color = 'var(--acc3, orange)';
     }
   }
+}
+
+// Zkontrolovat provider limity při každém překladu
+window.checkProviderRequestLimit = function(prov) {
+  const limits = getProviderLimits();
+  const reqLimit = limits[prov]?.reqs;
+  if (!reqLimit || reqLimit <= 0) return false;
+  return _getProvReqCount(prov) >= reqLimit;
+};
+
+window.incrementProviderReqCount = function(prov) {
+  const count = _getProvReqCount(prov) + 1;
+  _setProvReqCount(prov, count);
+  _updateProvReqUI(prov, count);
 };
 
 window.getProviderLimits = getProviderLimits;
+
 window.resetProviderReqCounts = function() {
-  ['groq', 'gemini', 'openrouter'].forEach(p => sessionStorage.removeItem('provider_req_count_' + p));
+  ['groq', 'gemini', 'openrouter'].forEach(p => localStorage.removeItem(_provReqKey(p)));
   const reqCountElIds = { groq: 'groqReqCount', gemini: 'geminiReqCount', openrouter: 'orReqCount' };
   for (const id of Object.values(reqCountElIds)) {
     const el = document.getElementById(id);
@@ -5256,7 +5271,16 @@ window.resetProviderReqCounts = function() {
   }
 };
 
+// Po načtení stránky obnovit dnešní počty z localStorage
+window.restoreProviderReqCounts = function() {
+  ['groq', 'gemini', 'openrouter'].forEach(prov => {
+    const count = _getProvReqCount(prov);
+    if (count > 0) _updateProvReqUI(prov, count);
+  });
+};
+
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(loadProviderLimitInputs, 600);
   setTimeout(mirrorAutoLog, 1000);
+  setTimeout(window.restoreProviderReqCounts, 800);
 });
