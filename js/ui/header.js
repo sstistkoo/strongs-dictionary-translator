@@ -97,12 +97,12 @@ export function createHeaderApi({ state, t, getTranslationStateForKey, storeKey,
      const elFailed = document.getElementById('failedCount');
      if (elFailed) elFailed.textContent = failedCount > 0 ? `(${failedCount})` : '';
 
-     // Počet úkolů opravy témat (definice, význam, kjv, původ, specialist)
+     // Počet úkolů opravy témat — jen záznamy ve stavu missing_topic (1–2 chybějící témata)
      let topicRepairTaskCount = 0;
      const topics = ['definice','vyznam','kjv','puvod','specialista'];
      for (const key of Object.keys(state.translated)) {
+       if (getTranslationStateForKey(key) !== 'missing_topic') continue;
        const t = state.translated[key];
-       if (!t || t.skipped) continue;
        for (const topicId of topics) {
          const val = String(t[topicId] || '').trim();
          if (!hasMeaningfulValue(val)) {

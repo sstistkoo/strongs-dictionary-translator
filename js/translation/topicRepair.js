@@ -26,8 +26,8 @@ function getDefaultBatchTopicSystemPrompt(topicId) {
         }
     }
     
-    // Final fallback
-return `Jsi expert na biblistiku, koine řečtinu, hebrejštinu, aramejštinu a angličtinu. Tvým úkolem je vědecký překlad Strongova slovníku do češtiny.`;
+    // Final fallback — použij jazykově-aware resolver (ne hardcoded čeština)
+    return String(getResolvedSystemMessage() || '').trim();
 }
 
 function getDefaultBatchTopicUserPrompt(topicId) {
@@ -612,19 +612,7 @@ async function processTopicRepairQueue() {
          updateTopicRepairProviderStatus();
          try {
 nextTask.detectedTopics = [];
-            // Get system prompt - vždy použijeme core system prompt
-            const targetLang = String(localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
-            const targetPromptPack = getPromptPack(targetLang);
-            let systemContent;
-            if (targetPromptPack) {
-                systemContent = targetPromptPack['aiPrompts.core.system'];
-            }
-            if (!systemContent || typeof systemContent !== 'string') {
-                const enPromptPack = getPromptPack('en');
-                systemContent = enPromptPack?.['aiPrompts.core.system'];
-            }
-            systemContent = String(systemContent || 'Jsi expert na biblistiku, koine řečtinu, hebrejštinu, aramejštinu a angličtinu. Tvým úkolem je vědecký překlad Strongova slovníku do češtiny.').trim();
-            
+            const systemContent = getDefaultBatchTopicSystemPrompt(nextTask.topicId);
             const messages = [
               { role: 'system', content: systemContent },
               { role: 'user', content: buildTopicPrompt(nextTask.key, nextTask.topicId) }
@@ -881,6 +869,14 @@ function applyTopicRepairSelected() {
      task.candidateValue = '';
      task.checked = false;
    }
+  // Odstraň tasky kde je téma nyní úspěšně vyplněno
+  if (applied > 0) {
+    topicRepairState.tasks = topicRepairState.tasks.filter(task => {
+      if (task.hidden) return true; // zachovat manually approved
+      const translatedValue = state.translated[task.key]?.[task.topicId];
+      return !hasMeaningfulValue(translatedValue);
+    });
+  }
   if (applied > 0) {
     saveProgress();
     renderList();

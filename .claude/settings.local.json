@@ -23,7 +23,8 @@
       "Bash(rm -rf \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\\\\.git\")",
       "Bash(Remove-Item \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\\\\strongs-dictionary-translator\\\\backup\\\\test \\(13\\).txt\")",
       "Bash(Get-ChildItem \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\" -Exclude \"strongs-dictionary-translator\",\".kilo\",\"backup\")",
-      "Bash(Select-Object Name, PSIsContainer)"
+      "Bash(Select-Object Name, PSIsContainer)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\" -Depth 2 | Where-Object { $_.PSIsContainer } | Select-Object FullName)"
     ]
   }
 }
