@@ -295,9 +295,10 @@ function closeSettingsModal() {
 
 function showPromptAIModal() {
   const modal = document.getElementById('promptAIModal');
+  const MAX_TOKENS_DEFAULTS = { groq: 4096, gemini: 8192, openrouter: 8192 };
   ['groq', 'gemini', 'openrouter'].forEach(prov => {
     const savedTemp = localStorage.getItem(`strong_ai_temperature_${prov}`) || localStorage.getItem('strong_ai_temperature') || '0.3';
-    const savedMax = localStorage.getItem(`strong_ai_max_tokens_${prov}`) || localStorage.getItem('strong_ai_max_tokens') || '2500';
+    const savedMax = localStorage.getItem(`strong_ai_max_tokens_${prov}`) || localStorage.getItem('strong_ai_max_tokens') || String(MAX_TOKENS_DEFAULTS[prov] || 4096);
     const tempEl = document.getElementById(`aiTemperature_${prov}`);
     const maxEl = document.getElementById(`aiMaxTokens_${prov}`);
     if (tempEl) tempEl.value = savedTemp;
@@ -318,9 +319,10 @@ function closePromptAIModal() {
 }
 
 function saveAISettings() {
+  const MAX_TOKENS_DEFAULTS = { groq: 4096, gemini: 8192, openrouter: 8192 };
   ['groq', 'gemini', 'openrouter'].forEach(prov => {
     const temp = document.getElementById(`aiTemperature_${prov}`)?.value || '0.3';
-    const max = document.getElementById(`aiMaxTokens_${prov}`)?.value || '2500';
+    const max = document.getElementById(`aiMaxTokens_${prov}`)?.value || String(MAX_TOKENS_DEFAULTS[prov] || 4096);
     safeSetLocalStorage(`strong_ai_temperature_${prov}`, temp, 'settingsModals');
     safeSetLocalStorage(`strong_ai_max_tokens_${prov}`, max, 'settingsModals');
   });

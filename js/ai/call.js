@@ -310,8 +310,8 @@ function getTranslationEngineLabel(raw, fallbackProvider, fallbackModel) {
   // Load AI settings from localStorage (per provider with legacy fallback)
   const temperature = parseFloat(localStorage.getItem('strong_ai_temperature_' + provider) || localStorage.getItem('strong_ai_temperature') || '0.3') || 0.3;
 
-  // Per-provider max_tokens — OpenRouter a Gemini zvládnou více, Groq je rychlejší s méně
-  const PROVIDER_MAX_TOKENS = { groq: 2500, gemini: 8192, openrouter: 8192 };
+  // Per-provider max_tokens
+  const PROVIDER_MAX_TOKENS = { groq: 4096, gemini: 8192, openrouter: 8192 };
   const maxTokensDefault = PROVIDER_MAX_TOKENS[provider] || 4096;
   const maxTokens = parseInt(localStorage.getItem('strong_ai_max_tokens_' + provider) || localStorage.getItem('strong_ai_max_tokens') || String(maxTokensDefault), 10) || maxTokensDefault;
   

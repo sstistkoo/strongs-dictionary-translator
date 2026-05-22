@@ -672,6 +672,52 @@ try {
   updateFailedCount();
 }
 
+// ── Token-budget helpers ─────────────────────────────────────────────────────
+// Prevent output truncation by estimating needed output tokens before sending.
+// Formula: per entry, (key+greek+def chars / 4) * 1.3 + 150 base for V,P,K,S.
+// Conservative — errs on the side of splitting rather than truncating.
+function getMaxOutputTokens(prov) {
+  const DEFAULTS = { groq: 4096, gemini: 8192, openrouter: 8192 };
+  const def = DEFAULTS[prov] || 4096;
+  return parseInt(
+    localStorage.getItem('strong_ai_max_tokens_' + prov) ||
+    localStorage.getItem('strong_ai_max_tokens') ||
+    String(def), 10
+  ) || def;
+}
+
+function estimateOutputTokens(entries) {
+  let total = 0;
+  for (const e of entries) {
+    const def = e.definice || e.def || '';
+    const chars = (e.key || '').length + (e.greek || '').length + def.length;
+    total += Math.ceil(chars / 4 * 1.3) + 150;
+  }
+  return total;
+}
+
+function splitBatchByTokenBudget(keys, maxOutputTokens) {
+  const budget = Math.floor(maxOutputTokens * 0.85);
+  const subBatches = [];
+  let current = [];
+  let currentEst = 0;
+  for (const key of keys) {
+    const entry = state.entryMap.get(key);
+    if (!entry) continue;
+    const est = estimateOutputTokens([entry]);
+    if (current.length > 0 && currentEst + est > budget) {
+      subBatches.push(current);
+      current = [key];
+      currentEst = est;
+    } else {
+      current.push(key);
+      currentEst += est;
+    }
+  }
+  if (current.length > 0) subBatches.push(current);
+  return subBatches.length > 0 ? subBatches : [keys];
+}
+
 async function translateBatch(keys, depth = 0) {
   const preferredProvider = document.getElementById('provider')?.value || '';
   const prov   = resolveMainBatchProvider(preferredProvider);
@@ -682,6 +728,18 @@ async function translateBatch(keys, depth = 0) {
   state.currentBatchSize = parseInt(document.getElementById('batchSizeRun').value);
 
   if (!apiKey) { showToast(t('toast.apiKey.enterForProvider', { provider: prov })); return { ok: false }; }
+
+  // Pre-flight token budget split — at depth 0 only, to avoid recursive double-split
+  if (depth === 0 && keys.length > 1) {
+    const subBatches = splitBatchByTokenBudget(keys, getMaxOutputTokens(prov));
+    if (subBatches.length > 1) {
+      log(`⚙️ Token budget: dělím ${keys.length} hesel → ${subBatches.map(b => b.length).join('+')} požadavků`);
+      for (const subBatch of subBatches) {
+        await translateBatch(subBatch, 0);
+      }
+      return { ok: true };
+    }
+  }
 
   // Start timer pri prvn�m prekladu
   if (!state.startTime) {
@@ -1058,6 +1116,27 @@ async function translateBatchForProvider(allKeys, prov, apiKey, model) {
     return true;
   });
   if (!keys.length) return { ok: true, translatedCount: 0, total: 0 };
+
+  // Pre-flight token budget split
+  if (keys.length > 1) {
+    const subBatches = splitBatchByTokenBudget(keys, getMaxOutputTokens(prov));
+    if (subBatches.length > 1) {
+      log(`⚙️ [${prov}] Token budget: dělím ${keys.length} hesel → ${subBatches.map(b => b.length).join('+')} požadavků`);
+      let combined = { ok: true, translatedCount: 0, total: 0 };
+      for (const subBatch of subBatches) {
+        const r = await translateBatchForProvider(subBatch, prov, apiKey, model);
+        if (r.ok) {
+          combined.translatedCount += r.translatedCount || 0;
+          combined.total += r.total || 0;
+        } else {
+          combined.ok = false;
+          if (r.rateLimited) combined.rateLimited = true;
+          if (r.cooldownSeconds) combined.cooldownSeconds = r.cooldownSeconds;
+        }
+      }
+      return combined;
+    }
+  }
 
   const batch = keys.map(k => state.entryMap.get(k)).filter(Boolean);
   if (!batch.length) return { ok: false };
