@@ -409,7 +409,6 @@ function saveLangSettings() {
     // Allow custom languages too (not just UI_LANGS whitelist)
     const customMessages = typeof window !== 'undefined' ? window.__CUSTOM_UI_MESSAGES__ : null;
     const ui = (UI_LANGS.has(uiRaw) || customMessages?.[uiRaw]) ? uiRaw : DEFAULT_UI_LANG;
-    console.log('[saveLangSettings] uiRaw:', uiRaw, 'ui:', ui, 'isCustom:', !!customMessages?.[uiRaw]);
     safeSetLocalStorage('strong_target_lang', target, 'settingsModals');
     safeSetLocalStorage('strong_source_lang', source, 'settingsModals');
     safeSetLocalStorage(UI_LANG_KEY, ui, 'settingsModals');

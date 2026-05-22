@@ -382,15 +382,14 @@ function applyUiLanguage() {
     setAttr('promptStatus', 'title', t('prompt.status.title'));
     setAttr('btnPromptAuto', 'title', t('prompt.auto.title'));
     setAttr('fileIdBadge', 'title', t('file.active.title'));
+    const targetCode = getCurrentTargetLangCode();
+    const sourceCode = getCurrentSourceLangCode();
     const hdrLangPair = document.getElementById('hdrLangPair');
-    if (hdrLangPair) hdrLangPair.textContent = `GR-${getCurrentTargetLangCode()}`;
+    if (hdrLangPair) hdrLangPair.textContent = `${sourceCode}-${targetCode}`;
     const autoPanelLangTarget = document.getElementById('autoPanelLangTarget');
     const autoPanelLangSource = document.getElementById('autoPanelLangSource');
-    if (autoPanelLangTarget) autoPanelLangTarget.textContent = getCurrentTargetLangCode();
-    if (autoPanelLangSource) {
-      const sl = (localStorage.getItem('strong_source_lang') || 'gr').toLowerCase();
-      autoPanelLangSource.textContent = sl === 'both' ? 'G+H' : sl.toUpperCase();
-    }
+    if (autoPanelLangTarget) autoPanelLangTarget.textContent = targetCode;
+    if (autoPanelLangSource) autoPanelLangSource.textContent = sourceCode;
     const currentLegacyProv = String(document.getElementById('provider')?.value || '').trim();
     if (currentLegacyProv === 'groq' || currentLegacyProv === 'gemini') {
       refreshStaticProviderSelectLabel('model', currentLegacyProv);
@@ -815,6 +814,11 @@ function getActiveSystemMessage() {
       let target = String(localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
       if (target === 'cs') target = 'cz';
       return target.toUpperCase();
+    }
+
+    function getCurrentSourceLangCode() {
+      const sl = (localStorage.getItem('strong_source_lang') || 'gr').toLowerCase();
+      return sl === 'both' ? 'G+H' : sl.toUpperCase();
     }
 
     function getPromptLanguageName(code, kind = 'target') {
