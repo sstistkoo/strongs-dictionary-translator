@@ -205,7 +205,7 @@
         <input type="number" id="batchSize_groq" class="auto-small-input" min="1" max="200" step="1" value="5" title="Počet hesel na dávku — Groq" style="width:40px" onchange="saveProviderLimit('groq','batchSize',this.value)">
         <input type="number" id="interval_groq" class="auto-small-input" min="0" step="1" value="20" title="Interval Groq mezi dávkami v sekundách" style="width:46px" onchange="saveProviderLimit('groq','interval',this.value)">
         <input type="number" id="limitReqs_groq" class="auto-small-input" min="0" step="10" placeholder="req" title="Limit požadavků Groq/den na klíč (0=vypnuto)" style="width:46px" onchange="saveProviderLimit('groq','reqs',this.value)">
-        <input type="number" id="limitTokens_groq" class="auto-small-input" min="0" step="10000" placeholder="tok" title="Limit tokenů Groq/den na klíč (0=vypnuto)" style="width:54px" onchange="saveProviderLimit('groq','tokens',this.value)">
+        <input type="text" id="limitTokens_groq" class="auto-small-input" placeholder="tok" title="Limit tokenů Groq/den na klíč (0=vypnuto, např. 500k)" style="width:46px" onchange="saveProviderLimit('groq','tokens',this.value)">
         <label id="autoEnableLabelGroq" class="auto-enable-label" title="Zapnout/vypnout Groq pro AUTO">
           <input type="checkbox" id="autoEnable_groq" checked aria-label="Zapnout Groq v AUTO">
           G
@@ -219,7 +219,7 @@
         <input type="number" id="batchSize_gemini" class="auto-small-input" min="1" max="200" step="1" value="5" title="Počet hesel na dávku — Gemini" style="width:40px" onchange="saveProviderLimit('gemini','batchSize',this.value)">
         <input type="number" id="interval_gemini" class="auto-small-input" min="0" step="1" value="20" title="Interval Gemini mezi dávkami v sekundách" style="width:46px" onchange="saveProviderLimit('gemini','interval',this.value)">
         <input type="number" id="limitReqs_gemini" class="auto-small-input" min="0" step="10" value="400" title="Limit požadavků Gemini/den (0=vypnuto)" style="width:46px" onchange="saveProviderLimit('gemini','reqs',this.value)">
-        <input type="number" id="limitTokens_gemini" class="auto-small-input" min="0" step="10000" placeholder="tok" title="Limit tokenů Gemini/den (0=vypnuto)" style="width:54px" onchange="saveProviderLimit('gemini','tokens',this.value)">
+        <input type="text" id="limitTokens_gemini" class="auto-small-input" placeholder="tok" title="Limit tokenů Gemini/den (0=vypnuto, např. 500k)" style="width:46px" onchange="saveProviderLimit('gemini','tokens',this.value)">
         <label id="autoEnableLabelGemini" class="auto-enable-label" title="Zapnout/vypnout Gemini fallback">
           <input type="checkbox" id="autoEnable_gemini" checked aria-label="Zapnout Gemini v AUTO">
           Gm
@@ -232,7 +232,7 @@
         <input type="number" id="batchSize_openrouter" class="auto-small-input" min="1" max="200" step="1" value="5" title="Počet hesel na dávku — OpenRouter" style="width:40px" onchange="saveProviderLimit('openrouter','batchSize',this.value)">
         <input type="number" id="interval_openrouter" class="auto-small-input" min="0" step="1" value="20" title="Interval OpenRouter mezi dávkami v sekundách" style="width:46px" onchange="saveProviderLimit('openrouter','interval',this.value)">
         <input type="number" id="limitReqs_openrouter" class="auto-small-input" min="0" step="10" value="400" title="Limit požadavků OpenRouter/den (0=vypnuto)" style="width:46px" onchange="saveProviderLimit('openrouter','reqs',this.value)">
-        <input type="number" id="limitTokens_openrouter" class="auto-small-input" min="0" step="10000" placeholder="tok" title="Limit tokenů OpenRouter/den (0=vypnuto)" style="width:54px" onchange="saveProviderLimit('openrouter','tokens',this.value)">
+        <input type="text" id="limitTokens_openrouter" class="auto-small-input" placeholder="tok" title="Limit tokenů OpenRouter/den (0=vypnuto, např. 500k)" style="width:46px" onchange="saveProviderLimit('openrouter','tokens',this.value)">
         <label id="autoEnableLabelOpenrouter" class="auto-enable-label" title="Zapnout/vypnout OpenRouter fallback">
           <input type="checkbox" id="autoEnable_openrouter" checked aria-label="Zapnout OpenRouter v AUTO">
           OR

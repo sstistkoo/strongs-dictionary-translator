@@ -219,7 +219,7 @@ async function callAIWithRetry(provider, apiKey, model, messages) {
          if (isRate) {
            const parsedRetry = rateInfoFromErrorMessage(e?.message || '')?.retryAfterSec || 0;
            const wait = Math.max(2, Math.min(20, parsedRetry || ((attempt + 1) * 10)));
-           const shouldSwitchModelImmediately = provider === 'groq';
+           const shouldSwitchModelImmediately = provider === 'groq' || provider === 'openrouter';
            logWarn('callAIWithRetry', t('ai.log.rateLimitWait', { model: m, seconds: wait }), {
              provider, model: m, attempt: attempt + 1, waitSeconds: wait
            });

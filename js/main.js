@@ -5176,9 +5176,11 @@ function getProviderLimits() {
 window.saveProviderLimit = function(prov, type, val) {
   const limits = getProviderLimits();
   if (!limits[prov]) limits[prov] = {};
-  const num = parseInt(val, 10);
+  const num = type === 'tokens' ? _parseTokInput(val) : parseInt(val, 10);
   limits[prov][type] = Number.isNaN(num) ? null : num;
   localStorage.setItem(PROVIDER_LIMIT_KEY, JSON.stringify(limits));
+  if (type === 'tokens') _updateProvTokenUI(prov, _getProvTokenCount(prov));
+  if (type === 'reqs') _updateProvReqUI(prov, _getProvReqCount(prov));
 };
 
 function loadProviderLimitInputs() {
@@ -5206,7 +5208,7 @@ function loadProviderLimitInputs() {
     if (bsEl && limits[prov]?.batchSize != null) bsEl.value = limits[prov].batchSize;
     if (ivEl && limits[prov]?.interval != null) ivEl.value = limits[prov].interval;
     if (rqEl && limits[prov]?.reqs != null) rqEl.value = limits[prov].reqs;
-    if (tkEl && limits[prov]?.tokens != null) tkEl.value = limits[prov].tokens;
+    if (tkEl && limits[prov]?.tokens != null) tkEl.value = _fmtTok(limits[prov].tokens);
   }
 }
 
@@ -5314,6 +5316,11 @@ function _setProvTokenCount(prov, count) {
 }
 
 function _fmtTok(n) { return n >= 1000 ? Math.round(n / 1000) + 'k' : String(n); }
+function _parseTokInput(str) {
+  const s = String(str || '').trim().toLowerCase().replace(/\s/g, '');
+  if (s.endsWith('k')) return Math.round(parseFloat(s) * 1000) || 0;
+  return parseInt(s, 10) || 0;
+}
 
 function _updateProvTokenUI(prov, count) {
   const limits = getProviderLimits();

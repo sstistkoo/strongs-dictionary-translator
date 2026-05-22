@@ -89,6 +89,12 @@ export function createAutoApi(deps) {
 
   const PROVIDER_LABELS = { groq: 'Groq', gemini: 'Gemini', openrouter: 'OpenRouter' };
 
+  function _fmtWait(sec) {
+    if (sec < 60) return sec + 's';
+    const m = Math.ceil(sec / 60);
+    return m + 'min';
+  }
+
   function setAutoProviderCountdownLabel(prov, text) {
     const el = document.getElementById('autoCountdown_' + prov);
     if (el) el.textContent = text;
@@ -309,7 +315,7 @@ export function createAutoApi(deps) {
           const waitUntil = Date.now() + delay;
           while (state.autoRunning && Date.now() < waitUntil) {
             const remSec = Math.ceil((waitUntil - Date.now()) / 1000);
-            setProviderStatus(prov, remSec + 's');
+            setProviderStatus(prov, _fmtWait(remSec));
             // Groq dostane i hlavní countdown element
             if (prov === 'groq') {
               const countdown = document.getElementById('countdown');
@@ -415,7 +421,7 @@ export function createAutoApi(deps) {
         const nextAllowed = state.seqProviderNextAllowed[prov] || 0;
         if (now < nextAllowed) {
           const waitSec = Math.ceil((nextAllowed - now) / 1000);
-          setProviderStatus(prov, 'čeká ' + waitSec + 's');
+          setProviderStatus(prov, 'čeká ' + _fmtWait(waitSec));
           continue; // tento provider ještě nesmí, zkusíme další
         }
 
