@@ -32,7 +32,9 @@
       "Bash(node -e \"require\\('fs'\\).readFile\\('i18n/cs.json', 'utf8', \\(err,data\\)=>{ if\\(err\\) console.error\\('ERR', err.message\\); else try{JSON.parse\\(data\\); console.log\\('OK'\\)}catch\\(e\\){console.log\\('JSON ERR:', e.message\\)}}\\)\")",
       "Bash(node -e 'try{JSON.parse\\(require\\('\\\\''fs'\\\\''\\).readFileSync\\('\\\\''__TRACKED_VAR__'\\\\'', '\\\\''utf8'\\\\''\\)\\); console.log\\('\\\\''✓ __TRACKED_VAR__'\\\\''\\)}catch\\(e\\){console.log\\('\\\\''✗ __TRACKED_VAR__:'\\\\'', e.message\\)}')",
       "Bash(node -e ' *)",
-      "PowerShell($content = Get-Content \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\\\\i18n\\\\missing_i18n_audit.json\" -Raw -Encoding UTF8; try { $null = $content | ConvertFrom-Json; Write-Host \"JSON je validní\" } catch { Write-Host \"Chyba: $_\" })"
+      "PowerShell($content = Get-Content \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\\\\i18n\\\\missing_i18n_audit.json\" -Raw -Encoding UTF8; try { $null = $content | ConvertFrom-Json; Write-Host \"JSON je validní\" } catch { Write-Host \"Chyba: $_\" })",
+      "Bash(gh repo *)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }
