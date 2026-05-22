@@ -384,6 +384,13 @@ function applyUiLanguage() {
     setAttr('fileIdBadge', 'title', t('file.active.title'));
     const hdrLangPair = document.getElementById('hdrLangPair');
     if (hdrLangPair) hdrLangPair.textContent = `GR-${getCurrentTargetLangCode()}`;
+    const autoPanelLangTarget = document.getElementById('autoPanelLangTarget');
+    const autoPanelLangSource = document.getElementById('autoPanelLangSource');
+    if (autoPanelLangTarget) autoPanelLangTarget.textContent = getCurrentTargetLangCode();
+    if (autoPanelLangSource) {
+      const sl = (localStorage.getItem('strong_source_lang') || 'gr').toLowerCase();
+      autoPanelLangSource.textContent = sl === 'both' ? 'G+H' : sl.toUpperCase();
+    }
     const currentLegacyProv = String(document.getElementById('provider')?.value || '').trim();
     if (currentLegacyProv === 'groq' || currentLegacyProv === 'gemini') {
       refreshStaticProviderSelectLabel('model', currentLegacyProv);

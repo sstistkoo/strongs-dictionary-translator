@@ -245,18 +245,6 @@ function getDefaultContentTagForTarget(targetRaw) {
 
  function showSettingsModal() {
    initPipelineModelSelectorsInSettingsModal();
-    const autoTokenLimitEl = document.getElementById('autoTokenLimit');
-    const tokenLimitRunMobileEl = document.getElementById('tokenLimitRunMobile');
-    console.log('[showSettingsModal] autoTokenLimit:', autoTokenLimitEl, 'tokenLimitRunMobile:', tokenLimitRunMobileEl);
-    if (autoTokenLimitEl && tokenLimitRunMobileEl) {
-      tokenLimitRunMobileEl.value = autoTokenLimitEl.value;
-    } else if (tokenLimitRunMobileEl) {
-      const saved = localStorage.getItem('strong_auto_token_limit') || '0';
-      tokenLimitRunMobileEl.value = saved;
-      console.log('[showSettingsModal] fallback to localStorage:', saved);
-    } else {
-      console.warn('showSettingsModal: tokenLimitRunMobile missing', { autoTokenLimitEl, tokenLimitRunMobileEl });
-    }
   document.getElementById('settingsModal').classList.add('show');
 }
 
@@ -272,18 +260,6 @@ function closeSettingsModal() {
    if (providerEl) providerEl.value = 'groq';
    const mainGroqEl = document.getElementById('model');
    if (mainGroq && mainGroqEl) mainGroqEl.value = mainGroq;
-    // Set token limit BEFORE init calls – original order
-    const tokenLimitRunMobile = document.getElementById('tokenLimitRunMobile');
-    if (tokenLimitRunMobile) {
-      const newVal = tokenLimitRunMobile.value || '0';
-      localStorage.setItem('strong_auto_token_limit', newVal);
-      const autoTokenLimit = document.getElementById('autoTokenLimit');
-      if (autoTokenLimit) {
-        autoTokenLimit.value = newVal;
-      }
-    } else {
-      console.warn('closeSettingsModal: tokenLimitRunMobile not found', { tokenLimitRunMobile });
-    }
    onProviderChange();
    initPipelineModelSelectors();
    initRunSelects();
@@ -304,9 +280,6 @@ function showPromptAIModal() {
     if (tempEl) tempEl.value = savedTemp;
     if (maxEl) maxEl.value = savedMax;
   });
-  // Load token limit for auto translate
-  const savedTokenLimit = localStorage.getItem('strong_auto_token_limit') || '0';
-  document.getElementById('tokenLimitRunMobile').value = savedTokenLimit;
   modal.style.display = 'flex';
   // Close on backdrop click
   modal.onclick = (e) => {
@@ -326,9 +299,6 @@ function saveAISettings() {
     safeSetLocalStorage(`strong_ai_temperature_${prov}`, temp, 'settingsModals');
     safeSetLocalStorage(`strong_ai_max_tokens_${prov}`, max, 'settingsModals');
   });
-  // Save token limit for auto translate
-  const tokenLimit = document.getElementById('tokenLimitRunMobile')?.value || '0';
-  safeSetLocalStorage('strong_auto_token_limit', tokenLimit, 'settingsModals');
   closePromptAIModal();
   showToast(t('toast.ai.settings.saved'));
 }

@@ -62,18 +62,10 @@
     </div>
     <div class="mobl-set-row">
       <label id="pipelineSecondaryGeminiLabel">Sekundární (Gemini)</label>
-      <label class="pipeline-toggle-label">
-        <input type="checkbox" id="pipelineEnableSecondaryGemini" aria-label="Zapnout sekundární Gemini">
-        <span id="pipelineEnableSecondaryGeminiText">zapnout opravy</span>
-      </label>
       <select id="pipelineModelSecondaryGemini" aria-label="Sekundární model Gemini" title="Sekundární model Gemini"></select>
     </div>
     <div class="mobl-set-row">
       <label id="pipelineSecondaryOpenrouterLabel">Sekundární (OpenRouter)</label>
-      <label class="pipeline-toggle-label">
-        <input type="checkbox" id="pipelineEnableSecondaryOpenrouter" aria-label="Zapnout sekundární OpenRouter">
-        <span id="pipelineEnableSecondaryOpenrouterText">zapnout opravy</span>
-      </label>
       <select id="pipelineModelSecondaryOpenrouter" aria-label="Sekundární model OpenRouter" title="Sekundární model OpenRouter"></select>
     </div>
     <div id="orModelRotationPanelMain" style="margin-top:6px; padding:8px; background:var(--bg3); border-radius:6px; border:1px solid var(--brd);">
@@ -137,14 +129,6 @@
      <div class="stat"><span id="lblDone">Přeloženo:</span> <b id="sDone">0</b></div>
      <div class="stat"><span id="lblRemain">Zbývá:</span> <b id="sRemain">0</b></div>
      <div class="stat"><span id="lblTotal">Celkem:</span> <b id="sTotal">0</b></div>
-     <div class="stat stat-accent" id="tokenStats" role="status" aria-live="polite">📊 Tokeny: 0</div>
-     <label class="stat auto-token-limit-label" id="autoTokenLimitLabel" for="autoTokenLimit">
-       🛑 Stop tokeny
-       <input type="number" id="autoTokenLimit" min="0" step="100" placeholder="0 = vypnuto"
-         class="auto-token-limit-input"
-         title="Po dosažení této hodnoty se AUTO zastaví. 0 = bez limitu."
-         aria-label="Limit tokenů pro automatické zastavení překladu">
-     </label>
    <div class="stat stat-time" id="timeElapsed">⏱ <span id="elapsedTime">0:00</span></div>
     <div class="pbar-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pbarContainer" title="Průběh překladu" aria-label="Průběh překladu"><div class="pbar-fill" id="pbar"></div></div>
     <div class="start-from-group">
@@ -244,6 +228,10 @@
     </div>
     <div class="auto-eta">
       ⏱ <span id="etaLabel">—</span>
+    </div>
+    <div id="autoPanelLangBadge" class="auto-lang-badge" title="Cílový jazyk překladu">
+      <span id="autoPanelLangSource" class="auto-lang-source">GR</span>
+      <span id="autoPanelLangTarget" class="auto-lang-target">??</span>
     </div>
   </div>
 
@@ -400,13 +388,6 @@
         <label id="settingsSecondaryOpenrouterLabel">Sekundární model (OpenRouter)</label>
         <select id="providerRunSecondaryOpenrouterModel" aria-label="Sekundární model OpenRouter" title="Sekundární model OpenRouter"></select>
       </div>
-   <div class="mobl-set-row">
-     <label id="settingsTokenLimitLabel">Limit tokenů</label>
-     <input type="number" id="tokenLimitRunMobile" min="0" step="100" placeholder="0 = vypnuto"
-       class="auto-token-limit-input"
-       title="Po dosažení této hodnoty se AUTO zastaví. 0 = bez limitu."
-       aria-label="Limit tokenů pro automatické zastavení překladu">
-   </div>
    <div class="modal-btns">
      <button class="mobl-btn grn" id="btnSettingsSave" onclick="closeSettingsModal()" aria-label="Uložit">✓ Uložit</button>
      <button class="mobl-btn cancel" id="btnSettingsClose" onclick="closeSettingsModal()" aria-label="Zavřít">✕ Zavřít</button>

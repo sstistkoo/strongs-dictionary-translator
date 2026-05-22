@@ -470,6 +470,35 @@ hr.div { border: none; border-top: 1px solid var(--brd); margin: 18px 0; }
   white-space: nowrap;
 }
 
+.auto-lang-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 12px;
+  border-left: 1px solid var(--brd);
+  margin-left: auto;
+  flex-shrink: 0;
+  gap: 0;
+}
+.auto-lang-source {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--txt3);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.auto-lang-target {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--acc);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
 .hbtn.auto {
   border-color: var(--grn);
   color: var(--grn);
