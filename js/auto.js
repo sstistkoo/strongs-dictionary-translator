@@ -336,6 +336,15 @@ export function createAutoApi(deps) {
         return;
       }
 
+      // Zastavit pokud všichni aktviní provideři dosáhli denního limitu
+      if (typeof window !== 'undefined' && activeProviders.length > 0 &&
+          activeProviders.every(p => window.checkProviderRequestLimit?.(p) || window.checkProviderTokenLimit?.(p))) {
+        stopAuto();
+        log('Všichni provideři dosáhli denního limitu — AUTO zastaveno');
+        showToast('Všichni provideři dosáhli denního limitu');
+        return;
+      }
+
       // Jsou ještě nepřeložená hesla? Spustit další kolo.
       const remaining2 = getNextBatch(1);
       if (!remaining2.length) {
@@ -507,6 +516,15 @@ export function createAutoApi(deps) {
       }
 
       if (!state.autoSeqRunning) return;
+
+      // Zastavit pokud všichni aktviní provideři dosáhli denního limitu
+      if (typeof window !== 'undefined' && activeProviders.length > 0 &&
+          activeProviders.every(p => window.checkProviderRequestLimit?.(p) || window.checkProviderTokenLimit?.(p))) {
+        stopAutoSequential();
+        log('Všichni provideři dosáhli denního limitu — AUTO zastaveno');
+        showToast('Všichni provideři dosáhli denního limitu');
+        return;
+      }
 
       // Naplánovat další kolo — hned nebo až nejdřívější provider bude ready
       if (!state.autoSeqRunning) return;
