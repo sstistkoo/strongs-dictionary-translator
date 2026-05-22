@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\Kristus\\\\strong_translate | Where-Object { $_.Name -ne \".kilo\" } | Select-Object Name, LastWriteTime)",
+      "Read(//mnt/c/Users/stistko/CascadeProjects/Kristus/**)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\Kristus\\\\strong_translate\" -Recurse -File -Filter \"*.js\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(Find \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\Kristus\\\\strong_translate\" -name \"*.js\" -path \"*/strong_translator*\")",
+      "Bash(git rebase *)",
+      "Bash(git stash *)",
+      "Bash(git fetch *)",
+      "Bash(git push *)",
+      "Bash(dir /s /b \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\")",
+      "Bash(grep -v \"\\\\.git\\\\|node_modules\\\\|\\\\.kilo\\\\|backup\\\\|translatory\\\\|strongs-dictionary-translator\\\\\\\\\")",
+      "Bash(git submodule *)",
+      "Bash(dir \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\\\\strongs-dictionary-translator\")",
+      "PowerShell(head)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(Get-Item \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\\\\js\\\\main.js\")",
+      "Bash(Select-Object FullName, Length)",
+      "Bash(rm -rf \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\\\\.git\")",
+      "Bash(Remove-Item \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\\\\strongs-dictionary-translator\\\\backup\\\\test \\(13\\).txt\")",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\" -Exclude \"strongs-dictionary-translator\",\".kilo\",\"backup\")",
+      "Bash(Select-Object Name, PSIsContainer)"
+    ]
+  }
+}

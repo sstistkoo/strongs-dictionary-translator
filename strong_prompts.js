@@ -60,17 +60,7 @@ const FINAL_PROMPT = {
 };
 
 const PROMPT_LIBRARY_BASE = {
-      default: [{ name: 'System', desc: 'System default prompt', text: DEFAULT_PROMPT, system: '' }],
-      detailed: [{ name: 'Detailed', desc: 'Detailed translation', text: DEFAULT_PROMPT, system: '' }],
-      concise: [{ name: 'Concise', desc: 'Short translation', text: DEFAULT_PROMPT, system: '' }],
-      literal: [{ name: 'Literal', desc: 'Literal translation', text: DEFAULT_PROMPT, system: '' }],
-      sekundarni: [{ name: 'System', desc: 'System default prompt', text: DEFAULT_PROMPT, system: '' }],
-      test: [],
-      library: [
-          { name: 'Precision', desc: 'High fidelity', text: DEFAULT_PROMPT, system: '' },
-          { name: 'Theological', desc: 'Context emphasis', text: DEFAULT_PROMPT, system: '' },
-          { name: 'Fast', desc: 'Short and fast', text: DEFAULT_PROMPT, system: '' }
-      ]
+      default: [{ name: 'System', desc: 'System default prompt', text: DEFAULT_PROMPT, system: '' }]
   };
 
 // ─── TÉMATICKÉ (TOPIC) BATCH ŠABLONY ──────────────────────────────────────
@@ -122,21 +112,6 @@ HESLA:
 {HESLA}`;
 
 const MODEL_TEST_PROMPT_CATALOG = {
-  preset_v1: { label: 'Fallback preset_v1', template: DEFAULT_PROMPT },
-  preset_v2: { label: 'Fallback preset_v2', template: DEFAULT_PROMPT },
-  preset_v3: { label: 'Fallback preset_v3', template: DEFAULT_PROMPT },
-  preset_v4: { label: 'Fallback preset_v4', template: DEFAULT_PROMPT },
-  preset_v5: { label: 'Fallback preset_v5', template: DEFAULT_PROMPT },
-  preset_v6: { label: 'Fallback preset_v6', template: DEFAULT_PROMPT },
-  preset_v7: { label: 'Fallback preset_v7', template: DEFAULT_PROMPT },
-  preset_v8: { label: 'Fallback preset_v8', template: DEFAULT_PROMPT },
-  preset_v9: { label: 'Fallback preset_v9', template: DEFAULT_PROMPT },
-  preset_v10: { label: 'Fallback preset_v10', template: DEFAULT_PROMPT },
-  preset_v11: { label: 'Fallback preset_v11', template: DEFAULT_PROMPT },
-  preset_v12: { label: 'Fallback preset_v12', template: DEFAULT_PROMPT },
-  preset_v13: { label: 'Fallback preset_v13', template: DEFAULT_PROMPT },
-  preset_v14: { label: 'Fallback preset_v14', template: DEFAULT_PROMPT },
-  preset_v15: { label: 'Fallback preset_v15', template: DEFAULT_PROMPT },
   preset_topic_definice: { label: 'Definice (single)', template: DEFAULT_PROMPT, topicLabel: 'Definice' },
   preset_topic_vyznam: { label: 'Význam (single)', template: DEFAULT_PROMPT, topicLabel: 'Význam' },
   preset_topic_kjv: { label: 'KJV (single)', template: DEFAULT_PROMPT, topicLabel: 'KJV' },

@@ -732,10 +732,10 @@ function enforceSpecialistaFormat(promptText) {
     }
 
     function getModelTestPromptType() {
-      return localStorage.getItem(MODEL_TEST_PROMPT_TYPE_KEY) || 'preset_v12';
+      return localStorage.getItem(MODEL_TEST_PROMPT_TYPE_KEY) || 'custom';
     }
     function getModelTestPromptCompareType() {
-      return localStorage.getItem(MODEL_TEST_PROMPT_COMPARE_TYPE_KEY) || 'preset_v12';
+      return localStorage.getItem(MODEL_TEST_PROMPT_COMPARE_TYPE_KEY) || 'custom';
     }
     function isModelTestPromptCompareEnabled() {
       return localStorage.getItem(MODEL_TEST_PROMPT_COMPARE_ENABLE_KEY) === '1';
@@ -1321,7 +1321,7 @@ function applyAutoPanelSettings() {
 // -- LOAD TXT -----------------------------------------------------
 const LAST_FILE_KEY = 'strong_last_file';
 const DEFAULT_TXT_FILE = 'strong_finalni_verze.txt';
-const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/sstistkoo/strong_translate/main/';
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/sstistkoo/strongs-dictionary-translator/main/';
 
 function loadTXT(input) {
   const file = input.files[0];

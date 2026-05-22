@@ -1142,7 +1142,7 @@ function setupUpload() {
 }
 
 // ─── NAČTENÍ JAZYKOVÉHO PROMPTU Z GITHUBU ────────────────────────────────────
-const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/sstistkoo/Kristus/main/strong_translate/i18n/';
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/sstistkoo/strongs-dictionary-translator/main/i18n/';
 async function loadLangFromGithub(code) {
   const filename = `prompts.${code}.json`;
   const url = GITHUB_RAW_BASE + filename;

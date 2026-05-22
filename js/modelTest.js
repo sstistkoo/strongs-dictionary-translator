@@ -93,7 +93,7 @@ function saveModelTestPromptSettings() {
     const customPromptInput = document.getElementById('modelTestCustomPromptInput');
     if (promptEnable) localStorage.setItem(MODEL_TEST_ENABLE_PROMPT_KEY, promptEnable.checked ? '1' : '0');
     if (promptTypeSelect) {
-        const promptType = promptTypeSelect.value || 'preset_v12';
+        const promptType = promptTypeSelect.value || 'custom';
         localStorage.setItem(MODEL_TEST_PROMPT_TYPE_KEY, promptType);
         
         // Also update the main prompt used for translation
@@ -103,7 +103,7 @@ function saveModelTestPromptSettings() {
         }
     }
     if (promptCompareEnable) localStorage.setItem(MODEL_TEST_PROMPT_COMPARE_ENABLE_KEY, promptCompareEnable.checked ? '1' : '0');
-    if (promptCompareTypeSelect) localStorage.setItem(MODEL_TEST_PROMPT_COMPARE_TYPE_KEY, promptCompareTypeSelect.value || 'preset_v12');
+    if (promptCompareTypeSelect) localStorage.setItem(MODEL_TEST_PROMPT_COMPARE_TYPE_KEY, promptCompareTypeSelect.value || 'custom');
     if (customPromptInput) localStorage.setItem(MODEL_TEST_CUSTOM_PROMPT_KEY, customPromptInput.value || '');
 }
 
