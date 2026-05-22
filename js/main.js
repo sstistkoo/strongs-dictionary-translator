@@ -127,6 +127,12 @@ function getModelTestPromptCatalog() {
     return map[ui] || 'CZ';
   }
 
+  function getTargetLangTag() {
+    let tgt = String(localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
+    if (tgt === 'cs') tgt = 'cz';
+    return tgt.toUpperCase();
+  }
+
 function applyUiLanguage() {
     // Load custom language from localStorage if active
     try {
@@ -149,8 +155,9 @@ function applyUiLanguage() {
       if (el) el.setAttribute(attr, value);
     };
     const uiTitleLang = getUiLangTag();
-    document.title = formatAppTitleWithTargetLang(t('app.title', { lang: uiTitleLang }), uiTitleLang);
-    setText('setupTitle', formatAppTitleWithTargetLang(t('setup.title', { lang: uiTitleLang }), uiTitleLang));
+    const targetTitleLang = getTargetLangTag();
+    document.title = formatAppTitleWithTargetLang(t('app.title', { lang: targetTitleLang }), targetTitleLang);
+    setText('setupTitle', formatAppTitleWithTargetLang(t('setup.title', { lang: targetTitleLang }), targetTitleLang));
     setText('setupAdvancedSummary', t('setup.advanced'));
     const providerForLabel = String(document.getElementById('provider')?.value || 'groq');
     setText('keyLabel', t('api.key.label', { provider: PROVIDERS[providerForLabel]?.label || 'Groq' }));
