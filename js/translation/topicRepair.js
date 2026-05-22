@@ -103,25 +103,37 @@ function updateTopicRepairProviderStatus() {
   const topicRepairState = state.topicRepairState;
   if (!topicRepairState) return;
   const providers = ['groq', 'gemini', 'openrouter'];
+  const limits = (typeof window !== 'undefined' && window.getProviderLimits) ? window.getProviderLimits() : {};
+  const fmtTok = (n) => n >= 1000 ? Math.round(n / 1000) + 'k' : String(n);
+  const statsElIds = { groq: 'trGroqStats', gemini: 'trGeminiStats', openrouter: 'trOrStats' };
   for (const prov of providers) {
     const line = document.getElementById(`topicRepairProvider_${prov}`);
     if (!line) continue;
+    const label = prov === 'groq' ? 'Groq' : (prov === 'gemini' ? 'Google' : 'OpenRouter');
     const enabled = !!topicRepairState.providerEnabled[prov];
     if (!enabled) {
-      const label = prov === 'groq' ? 'Groq' : (prov === 'gemini' ? 'Google' : 'OpenRouter');
       line.textContent = t('provider.status.disabled', { label });
-      continue;
-    }
-    if (topicRepairState.currentTask && topicRepairState.currentTask.provider === prov) {
-      const label = prov === 'groq' ? 'Groq' : (prov === 'gemini' ? 'Google' : 'OpenRouter');
+    } else if (topicRepairState.currentTask && topicRepairState.currentTask.provider === prov) {
       line.textContent = t('provider.status.running', { label });
-      continue;
+    } else {
+      const left = getProviderCooldownLeftSec(prov);
+      line.textContent = left > 0
+        ? t('provider.status.nextIn', { label, seconds: left })
+        : t('provider.status.ready', { label });
     }
-    const left = getProviderCooldownLeftSec(prov);
-    const label = prov === 'groq' ? 'Groq' : (prov === 'gemini' ? 'Google' : 'OpenRouter');
-    line.textContent = left > 0
-      ? t('provider.status.nextIn', { label, seconds: left })
-      : t('provider.status.ready', { label });
+    // Aktualizovat req/token stats span
+    const statsEl = document.getElementById(statsElIds[prov]);
+    if (statsEl && typeof window !== 'undefined' && window.getProviderCounts) {
+      const counts = window.getProviderCounts(prov);
+      const reqLimit = limits[prov]?.reqs;
+      const tokLimit = limits[prov]?.tokens;
+      const reqStr = counts.reqs + (reqLimit ? '/' + reqLimit : '') + ' req';
+      const tokStr = fmtTok(counts.tokens) + (tokLimit ? '/' + fmtTok(tokLimit) : '') + ' tok';
+      statsEl.textContent = reqStr + ' ' + tokStr;
+      const reqOver = reqLimit && counts.reqs >= reqLimit;
+      const tokOver = tokLimit && counts.tokens >= tokLimit;
+      statsEl.style.color = (reqOver || tokOver) ? 'var(--err, #ff4444)' : 'var(--txt3)';
+    }
   }
 }
 
@@ -357,6 +369,7 @@ function renderTopicRepairModal() {
    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10025;overflow-y:auto;padding:16px';
 
    const _trLimits = (typeof window !== 'undefined' && window.getProviderLimits) ? window.getProviderLimits() : {};
+   const _fmtTokTR = (n) => n != null && n >= 1000 ? Math.round(n / 1000) + 'k' : (n != null ? String(n) : '');
 
    // Vypočítání počtů pro zobrazení
    const allTasks = topicRepairState.tasks.filter(t => !t.hidden);
@@ -396,18 +409,20 @@ function renderTopicRepairModal() {
             <input type="number" id="tr_batchSize_groq" class="auto-small-input" min="1" max="200" step="1" value="${_trLimits.groq?.batchSize ?? 5}" style="width:40px" title="Počet hesel na dávku — Groq" onchange="window.saveProviderLimit&&saveProviderLimit('groq','batchSize',this.value)">
             <input type="number" id="tr_interval_groq" class="auto-small-input" min="0" step="1" value="${_trLimits.groq?.interval ?? 20}" style="width:46px" title="Interval Groq (s)" onchange="window.saveProviderLimit&&saveProviderLimit('groq','interval',this.value)">
             <input type="number" id="tr_limitReqs_groq" class="auto-small-input" min="0" step="10" value="${_trLimits.groq?.reqs ?? ''}" placeholder="req" style="width:46px" title="Limit požadavků Groq za session (0=vypnuto)" onchange="window.saveProviderLimit&&saveProviderLimit('groq','reqs',this.value)">
+            <input type="text" id="tr_limitTokens_groq" class="auto-small-input" placeholder="tok" style="width:46px" title="Limit tokenů Groq/den (0=vypnuto, např. 500k)" value="${_fmtTokTR(_trLimits.groq?.tokens)}" onchange="window.saveProviderLimit&&saveProviderLimit('groq','tokens',this.value)">
             <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
               <input type="checkbox" id="topicRepairEnable_groq" ${topicRepairState.providerEnabled.groq ? 'checked' : ''} onchange="applyTopicRepairProviderCheckboxes()" style="accent-color:var(--acc)">
               G
             </label>
             <span id="topicRepairProvider_groq">Groq: —</span>
-            <span id="trGroqTokens" style="color:var(--txt3);margin-left:4px"></span>
+            <span id="trGroqStats" style="color:var(--txt3);margin-left:4px"></span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <select id="topicRepairProviderTopic_gemini" onchange="setTopicRepairProviderTopic('gemini',this.value)" title="Téma pro Gemini" style="background:var(--bg2);border:1px solid var(--brd);border-radius:4px;color:var(--txt);padding:1px 3px;font-family:'JetBrains Mono',monospace;font-size:10px;max-width:120px">${_ptOpts('gemini')}</select>
             <input type="number" id="tr_batchSize_gemini" class="auto-small-input" min="1" max="200" step="1" value="${_trLimits.gemini?.batchSize ?? 5}" style="width:40px" title="Počet hesel na dávku — Gemini" onchange="window.saveProviderLimit&&saveProviderLimit('gemini','batchSize',this.value)">
             <input type="number" id="tr_interval_gemini" class="auto-small-input" min="0" step="1" value="${_trLimits.gemini?.interval ?? 20}" style="width:46px" title="Interval Gemini (s)" onchange="window.saveProviderLimit&&saveProviderLimit('gemini','interval',this.value)">
             <input type="number" id="tr_limitReqs_gemini" class="auto-small-input" min="0" step="10" value="${_trLimits.gemini?.reqs ?? 400}" placeholder="req" style="width:46px" title="Limit požadavků Gemini za session (0=vypnuto)" onchange="window.saveProviderLimit&&saveProviderLimit('gemini','reqs',this.value)">
+            <input type="text" id="tr_limitTokens_gemini" class="auto-small-input" placeholder="tok" style="width:46px" title="Limit tokenů Gemini/den (0=vypnuto, např. 500k)" value="${_fmtTokTR(_trLimits.gemini?.tokens)}" onchange="window.saveProviderLimit&&saveProviderLimit('gemini','tokens',this.value)">
             <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
               <input type="checkbox" id="topicRepairEnable_gemini" ${topicRepairState.providerEnabled.gemini ? 'checked' : ''} onchange="applyTopicRepairProviderCheckboxes()" style="accent-color:var(--acc)">
               Gm
@@ -420,6 +435,7 @@ function renderTopicRepairModal() {
             <input type="number" id="tr_batchSize_openrouter" class="auto-small-input" min="1" max="200" step="1" value="${_trLimits.openrouter?.batchSize ?? 5}" style="width:40px" title="Počet hesel na dávku — OpenRouter" onchange="window.saveProviderLimit&&saveProviderLimit('openrouter','batchSize',this.value)">
             <input type="number" id="tr_interval_openrouter" class="auto-small-input" min="0" step="1" value="${_trLimits.openrouter?.interval ?? 20}" style="width:46px" title="Interval OpenRouter (s)" onchange="window.saveProviderLimit&&saveProviderLimit('openrouter','interval',this.value)">
             <input type="number" id="tr_limitReqs_openrouter" class="auto-small-input" min="0" step="10" value="${_trLimits.openrouter?.reqs ?? 400}" placeholder="req" style="width:46px" title="Limit požadavků OpenRouter za session (0=vypnuto)" onchange="window.saveProviderLimit&&saveProviderLimit('openrouter','reqs',this.value)">
+            <input type="text" id="tr_limitTokens_openrouter" class="auto-small-input" placeholder="tok" style="width:46px" title="Limit tokenů OpenRouter/den (0=vypnuto, např. 500k)" value="${_fmtTokTR(_trLimits.openrouter?.tokens)}" onchange="window.saveProviderLimit&&saveProviderLimit('openrouter','tokens',this.value)">
             <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
               <input type="checkbox" id="topicRepairEnable_openrouter" ${topicRepairState.providerEnabled.openrouter ? 'checked' : ''} onchange="applyTopicRepairProviderCheckboxes()" style="accent-color:var(--acc)">
               OR

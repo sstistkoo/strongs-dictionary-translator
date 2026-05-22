@@ -5179,8 +5179,22 @@ window.saveProviderLimit = function(prov, type, val) {
   const num = type === 'tokens' ? _parseTokInput(val) : parseInt(val, 10);
   limits[prov][type] = Number.isNaN(num) ? null : num;
   localStorage.setItem(PROVIDER_LIMIT_KEY, JSON.stringify(limits));
-  if (type === 'tokens') _updateProvTokenUI(prov, _getProvTokenCount(prov));
-  if (type === 'reqs') _updateProvReqUI(prov, _getProvReqCount(prov));
+  if (type === 'tokens') {
+    _updateProvTokenUI(prov, _getProvTokenCount(prov));
+    // Sync modal tok input pokud je otevřený (a změna přišla z hlavního panelu)
+    const trTok = document.getElementById('tr_limitTokens_' + prov);
+    if (trTok && document.activeElement !== trTok) trTok.value = _fmtTok(num);
+    // Sync hlavní panel pokud změna přišla z modalu
+    const mainTok = document.getElementById('limitTokens_' + prov);
+    if (mainTok && document.activeElement !== mainTok) mainTok.value = _fmtTok(num);
+  }
+  if (type === 'reqs') {
+    _updateProvReqUI(prov, _getProvReqCount(prov));
+    const trReq = document.getElementById('tr_limitReqs_' + prov);
+    if (trReq && document.activeElement !== trReq) trReq.value = num || '';
+    const mainReq = document.getElementById('limitReqs_' + prov);
+    if (mainReq && document.activeElement !== mainReq) mainReq.value = num || '';
+  }
 };
 
 function loadProviderLimitInputs() {
@@ -5362,6 +5376,10 @@ window.restoreProviderTokenCounts = function() {
     const count = _getProvTokenCount(prov);
     _updateProvTokenUI(prov, count);
   });
+};
+
+window.getProviderCounts = function(prov) {
+  return { reqs: _getProvReqCount(prov), tokens: _getProvTokenCount(prov) };
 };
 
 window.addEventListener('DOMContentLoaded', () => {
