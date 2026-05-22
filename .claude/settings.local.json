@@ -34,7 +34,8 @@
       "Bash(node -e ' *)",
       "PowerShell($content = Get-Content \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\\\\i18n\\\\missing_i18n_audit.json\" -Raw -Encoding UTF8; try { $null = $content | ConvertFrom-Json; Write-Host \"JSON je validní\" } catch { Write-Host \"Chyba: $_\" })",
       "Bash(gh repo *)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\\\\js\\\\translation\" -Name)"
     ]
   }
 }

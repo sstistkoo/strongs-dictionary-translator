@@ -4393,7 +4393,7 @@ const { download, exportTXT, exportJSON, exportRange, exportAllLocalStorage } = 
    // Also log to console
  }
 
-function logTokenEntry(provider, inT, outT, total) {
+function logTokenEntry(provider, inT, outT, total, skipDailyLimit = false) {
    if (provider === 'groq') {
      state.groqTokens.in += inT;
      state.groqTokens.out += outT;
@@ -4403,8 +4403,8 @@ function logTokenEntry(provider, inT, outT, total) {
    state.totalTokens.in += inT;
    state.totalTokens.out += outT;
    state.totalTokens.total += total;
-   // Persistentní denní token tracking per provider/klíč
-   if (typeof window.incrementProviderTokenCount === 'function') {
+   // Persistentní denní token tracking — přeskočit pro model test
+   if (!skipDailyLimit && typeof window.incrementProviderTokenCount === 'function') {
      window.incrementProviderTokenCount(provider, total);
    }
    refreshTokenStatsDisplay();

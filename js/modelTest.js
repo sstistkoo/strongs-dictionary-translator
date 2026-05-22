@@ -405,7 +405,7 @@ export function createModelTestRunnerApi(deps) {
       return;
     }
     appendReport(`Tokeny: ${provider} | ${model} | ${totals.inT} in / ${totals.outT} out = ${totals.total}`);
-    logTokenEntry(provider, totals.inT, totals.outT, totals.total);
+    logTokenEntry(provider, totals.inT, totals.outT, totals.total, true);
   }
 
   function rateInfoFromErrorMessage(msg) {

@@ -1290,7 +1290,18 @@ function initTopicRepairBulkRunInputs() {
 function updateTopicRepairProviderStats() {
   try {
     const limits = (typeof window !== 'undefined' && window.getProviderLimits) ? window.getProviderLimits() : {};
-    const getReqCount = (prov) => parseInt(sessionStorage.getItem('provider_req_count_' + prov) || '0', 10);
+    const getReqCount = (prov) => {
+      const key = prov === 'groq'
+        ? 'provider_req_count_groq_' + (localStorage.getItem('strong_apikey_active_groq') || 'default')
+        : 'provider_req_count_' + prov;
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return 0;
+        const data = JSON.parse(raw);
+        const today = new Date().toISOString().slice(0, 10);
+        return data.date === today ? (data.count || 0) : 0;
+      } catch { return 0; }
+    };
 
     // OR: počet requestů / limit
     const orEl = document.getElementById('trOrStats');
@@ -1445,12 +1456,14 @@ async function runTopicRepairBulkTranslationCore(state, topicId, systemPrompt, u
           log('[' + prov + '] dosažen denní limit tokenů — zastavuji bulk worker');
           break;
         }
-        window.incrementProviderReqCount?.(prov);
       }
 
       // Atomicky vzít dávku (bez await uvnitř = bezpečné)
       const batchKeys = takeNextBulkBatch(effectiveBs);
       if (!batchKeys) break;
+
+      // Inkrementovat až když máme skutečnou dávku
+      window.incrementProviderReqCount?.(prov);
 
       updateTopicRepairModalUI();
       log('[' + prov + '] bulk ' + topicId + ': ' + batchKeys[0] + '-' + batchKeys[batchKeys.length - 1]);
@@ -1471,6 +1484,15 @@ async function runTopicRepairBulkTranslationCore(state, topicId, systemPrompt, u
         const rawText = String(raw?.content || '').trim();
         const parsedMap = parseTopicRepairBatchResponse(rawText, topicId);
         applyBulkBatchResult(prov, batchKeys, parsedMap, rawText, null);
+
+        // Denní token tracking
+        const usage = raw?.usage || raw?.usageMetadata;
+        if (usage && typeof window !== 'undefined') {
+          const inT = usage.prompt_tokens || usage.promptTokenCount || 0;
+          const outT = usage.completion_tokens || usage.candidatesTokenCount || 0;
+          window.incrementProviderTokenCount?.(prov, inT + outT);
+        }
+
         updateTopicRepairProviderStats();
 
         // Vlastní interval — každý provider čeká nezávisle
