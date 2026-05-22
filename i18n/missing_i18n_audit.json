@@ -109,8 +109,8 @@
       "reason": "Model labels (product names); optional localization only."
     }
   ],
-  "nextStep": "Extract strings in priorityFiles to i18n keys and add entries to cs/en/sk/pl JSON.",,"
-    "topicRepair.manualApproval.label": "✓ OK",
+  "nextStep": "Extract strings in priorityFiles to i18n keys and add entries to cs/en/sk/pl JSON.",
+  "topicRepair.manualApproval.label": "✓ OK",
     "topicRepair.manualApproval.title": "Mark this topic as correct — it will no longer appear in repairs",
     "toast.topicRepair.markOk": "✓ Topic {key}.{topic} marked as OK",
     "toast.topicRepair.unmarkOk": "Topic {key}.{topic} removed from OK list"

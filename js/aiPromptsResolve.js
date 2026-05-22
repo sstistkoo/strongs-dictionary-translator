@@ -3,10 +3,9 @@
  */
 import { t } from './i18n.js';
 import { getPromptPack } from './i18n.js';
-import core from '../strong_translator_core_new.js';
 import prompts from '../strong_prompts.js';
 
-const { FINAL_PROMPT, PROMPT_LIBRARY_BASE } = prompts;
+const { FINAL_PROMPT, PROMPT_LIBRARY_BASE, SYSTEM_MESSAGE, DEFAULT_PROMPT } = prompts;
 
 function tp(key, fallback) {
   const v = t(key);
@@ -53,15 +52,15 @@ function tTargetLang(key, fallback) {
 }
 
 export function getResolvedSystemMessage() {
-  return tTargetLang('aiPrompts.core.system', core.SYSTEM_MESSAGE);
+  return tTargetLang('aiPrompts.core.system', SYSTEM_MESSAGE);
 }
 
 export function getResolvedDefaultPrompt() {
-  return tp('aiPrompts.core.userDefault', core.DEFAULT_PROMPT);
+  return tp('aiPrompts.core.userDefault', DEFAULT_PROMPT);
 }
 
 export function getResolvedFinalPrompt() {
-   const commonBatchDefault = tp('aiPrompts.common.batchDefault', core.DEFAULT_PROMPT);
+   const commonBatchDefault = tp('aiPrompts.common.batchDefault', DEFAULT_PROMPT);
    return {
      name: tp('aiPrompts.final.name', FINAL_PROMPT.name),
      desc: tp('aiPrompts.final.desc', FINAL_PROMPT.desc),
@@ -73,7 +72,7 @@ export function getResolvedPromptLibraryBase() {
        const base = JSON.parse(JSON.stringify(PROMPT_LIBRARY_BASE));
        const defText = getResolvedDefaultPrompt();
        const sysText = getResolvedSystemMessage();
-       const commonBatchDefault = tp('aiPrompts.common.batchDefault', core.DEFAULT_PROMPT);
+       const commonBatchDefault = tp('aiPrompts.common.batchDefault', DEFAULT_PROMPT);
       if (base.default?.[0]) {
           const o = base.default[0];
           o.name = tp('aiPrompts.lib.default.name', o.name);
