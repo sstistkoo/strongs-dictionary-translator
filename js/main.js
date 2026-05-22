@@ -4403,6 +4403,10 @@ function logTokenEntry(provider, inT, outT, total) {
    state.totalTokens.in += inT;
    state.totalTokens.out += outT;
    state.totalTokens.total += total;
+   // Persistentní denní token tracking per provider/klíč
+   if (typeof window.incrementProviderTokenCount === 'function') {
+     window.incrementProviderTokenCount(provider, total);
+   }
    refreshTokenStatsDisplay();
 
    if (state.autoRunning && isAutoTokenLimitReached()) {
@@ -5198,9 +5202,11 @@ function loadProviderLimitInputs() {
     const bsEl = document.getElementById('batchSize_' + prov);
     const ivEl = document.getElementById('interval_' + prov);
     const rqEl = document.getElementById('limitReqs_' + prov);
+    const tkEl = document.getElementById('limitTokens_' + prov);
     if (bsEl && limits[prov]?.batchSize != null) bsEl.value = limits[prov].batchSize;
     if (ivEl && limits[prov]?.interval != null) ivEl.value = limits[prov].interval;
     if (rqEl && limits[prov]?.reqs != null) rqEl.value = limits[prov].reqs;
+    if (tkEl && limits[prov]?.tokens != null) tkEl.value = limits[prov].tokens;
   }
 }
 
@@ -5214,8 +5220,11 @@ function mirrorAutoLog() {
   dst.textContent = src.textContent;
 }
 
-// Req count — localStorage s denním resetem
-function _provReqKey(prov) { return 'provider_req_count_' + prov; }
+// Req count — localStorage s denním resetem, per-klíč pro Groq
+function _groqActiveKeyId() { return localStorage.getItem('strong_apikey_active_groq') || 'default'; }
+function _provReqKey(prov) {
+  return prov === 'groq' ? 'provider_req_count_groq_' + _groqActiveKeyId() : 'provider_req_count_' + prov;
+}
 function _todayStr() { return new Date().toISOString().slice(0, 10); }
 
 function _getProvReqCount(prov) {
@@ -5282,7 +5291,69 @@ window.resetProviderReqCounts = function() {
 window.restoreProviderReqCounts = function() {
   ['groq', 'gemini', 'openrouter'].forEach(prov => {
     const count = _getProvReqCount(prov);
-    if (count > 0) _updateProvReqUI(prov, count);
+    _updateProvReqUI(prov, count);
+  });
+};
+
+// Token count — localStorage s denním resetem, per-klíč pro Groq
+function _provTokenKey(prov) {
+  return prov === 'groq' ? 'provider_token_count_groq_' + _groqActiveKeyId() : 'provider_token_count_' + prov;
+}
+
+function _getProvTokenCount(prov) {
+  try {
+    const raw = localStorage.getItem(_provTokenKey(prov));
+    if (!raw) return 0;
+    const data = JSON.parse(raw);
+    return data.date === _todayStr() ? (data.count || 0) : 0;
+  } catch { return 0; }
+}
+
+function _setProvTokenCount(prov, count) {
+  localStorage.setItem(_provTokenKey(prov), JSON.stringify({ count, date: _todayStr() }));
+}
+
+function _fmtTok(n) { return n >= 1000 ? Math.round(n / 1000) + 'k' : String(n); }
+
+function _updateProvTokenUI(prov, count) {
+  const limits = getProviderLimits();
+  const limit = limits[prov]?.tokens;
+  const limitReached = limit && count >= limit;
+  const elId = { groq: 'groqTokenCount', gemini: 'geminiTokenCount', openrouter: 'orTokenCount' }[prov];
+  if (!elId) return;
+  const el = document.getElementById(elId);
+  if (el) {
+    el.textContent = _fmtTok(count) + (limit ? '/' + _fmtTok(limit) : '') + ' tok';
+    el.style.color = limitReached ? 'var(--err, #ff4444)' : '';
+  }
+  if (limitReached) {
+    const label = { groq: 'Groq', gemini: 'Gemini', openrouter: 'OpenRouter' }[prov] || prov;
+    const countdownEl = document.getElementById('autoCountdown_' + prov);
+    if (countdownEl) {
+      countdownEl.textContent = label + ': limit ' + _fmtTok(count) + '/' + _fmtTok(limit) + ' tok ✓';
+      countdownEl.style.color = 'var(--acc3, orange)';
+    }
+  }
+}
+
+window.incrementProviderTokenCount = function(prov, tokens) {
+  if (!tokens || tokens <= 0) return;
+  const count = _getProvTokenCount(prov) + tokens;
+  _setProvTokenCount(prov, count);
+  _updateProvTokenUI(prov, count);
+};
+
+window.checkProviderTokenLimit = function(prov) {
+  const limits = getProviderLimits();
+  const tokenLimit = limits[prov]?.tokens;
+  if (!tokenLimit || tokenLimit <= 0) return false;
+  return _getProvTokenCount(prov) >= tokenLimit;
+};
+
+window.restoreProviderTokenCounts = function() {
+  ['groq', 'gemini', 'openrouter'].forEach(prov => {
+    const count = _getProvTokenCount(prov);
+    _updateProvTokenUI(prov, count);
   });
 };
 
@@ -5290,4 +5361,5 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(loadProviderLimitInputs, 600);
   setTimeout(mirrorAutoLog, 1000);
   setTimeout(window.restoreProviderReqCounts, 800);
+  setTimeout(window.restoreProviderTokenCounts, 850);
 });

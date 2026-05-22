@@ -1435,13 +1435,17 @@ async function runTopicRepairBulkTranslationCore(state, topicId, systemPrompt, u
     while (true) {
       if (abortVersion !== Number(state.topicRepairBulkAbortVersion || 0)) break;
 
-      // Zkontrolovat request limit pro všechny providery
-      if (typeof window !== 'undefined' && window.checkProviderRequestLimit) {
-        if (window.checkProviderRequestLimit(prov)) {
+      // Zkontrolovat request a token limit
+      if (typeof window !== 'undefined') {
+        if (window.checkProviderRequestLimit?.(prov)) {
           log('[' + prov + '] dosažen limit požadavků — zastavuji bulk worker');
           break;
         }
-        window.incrementProviderReqCount && window.incrementProviderReqCount(prov);
+        if (window.checkProviderTokenLimit?.(prov)) {
+          log('[' + prov + '] dosažen denní limit tokenů — zastavuji bulk worker');
+          break;
+        }
+        window.incrementProviderReqCount?.(prov);
       }
 
       // Atomicky vzít dávku (bez await uvnitř = bezpečné)

@@ -52,9 +52,6 @@ export function createAutoApi(deps) {
     const autoInterval = document.getElementById('autoInterval');
     if (autoInterval) autoInterval.textContent = String(state.currentInterval);
     startAutoProviderCountdownTicker();
-    if (typeof window !== 'undefined' && window.resetProviderReqCounts) {
-      window.resetProviderReqCounts();
-    }
     if (isAutoTokenLimitReached()) {
       stopAuto();
       showToast(t('toast.auto.notStartedTokenLimit'));
@@ -264,11 +261,16 @@ export function createAutoApi(deps) {
         while (state.autoRunning) {
           if (isAutoTokenLimitReached()) break;
 
-          // Zkontrolovat request limit pro všechny providery
-          if (typeof window !== 'undefined' && window.checkProviderRequestLimit) {
-            if (window.checkProviderRequestLimit(prov)) {
+          // Zkontrolovat request a token limit pro providera
+          if (typeof window !== 'undefined') {
+            if (window.checkProviderRequestLimit?.(prov)) {
               log('[' + (PROVIDER_LABELS[prov]||prov) + '] dosažen limit požadavků — zastavuji worker');
               setProviderStatus(prov, 'limit req');
+              break;
+            }
+            if (window.checkProviderTokenLimit?.(prov)) {
+              log('[' + (PROVIDER_LABELS[prov]||prov) + '] dosažen denní limit tokenů — zastavuji worker');
+              setProviderStatus(prov, 'limit tok');
               break;
             }
           }
@@ -408,12 +410,18 @@ export function createAutoApi(deps) {
           continue; // tento provider ještě nesmí, zkusíme další
         }
 
-        // Zkontrolovat request limit pro všechny providery
-        if (typeof window !== 'undefined' && window.checkProviderRequestLimit) {
-          if (window.checkProviderRequestLimit(prov)) {
+        // Zkontrolovat request a token limit pro providera
+        if (typeof window !== 'undefined') {
+          if (window.checkProviderRequestLimit?.(prov)) {
             log('[' + (PROVIDER_LABELS[prov]||prov) + '] dosažen limit požadavků');
             setProviderStatus(prov, 'limit req');
-            state.seqProviderNextAllowed[prov] = Date.now() + 24 * 60 * 60 * 1000; // blokovat na zbytek session
+            state.seqProviderNextAllowed[prov] = Date.now() + 24 * 60 * 60 * 1000;
+            continue;
+          }
+          if (window.checkProviderTokenLimit?.(prov)) {
+            log('[' + (PROVIDER_LABELS[prov]||prov) + '] dosažen denní limit tokenů');
+            setProviderStatus(prov, 'limit tok');
+            state.seqProviderNextAllowed[prov] = Date.now() + 24 * 60 * 60 * 1000;
             continue;
           }
         }
@@ -541,9 +549,6 @@ export function createAutoApi(deps) {
       startElapsedTimer();
     }
     startAutoProviderCountdownTicker();
-    if (typeof window !== 'undefined' && window.resetProviderReqCounts) {
-      window.resetProviderReqCounts();
-    }
     setTimeout(() => {
       if (state.autoSeqRunning && !state.autoStepRunning) runSequentialStep();
     }, 50);
