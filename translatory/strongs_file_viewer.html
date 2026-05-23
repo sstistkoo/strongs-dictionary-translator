@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strong's File Viewer</title>
+<style>
+  :root {
+    --bg0:#0f0e0c; --bg1:#141210; --bg2:#1a1714; --bg3:#201d19; --bg4:#2a2620; --bg5:#333028;
+    --brd:#2e2a24; --brd2:#3a3530; --brd3:#4a4540;
+    --acc:#c8a84b; --acc2:#d4b86a; --acc3:#e8d090;
+    --grn:#5a9a6c; --grn2:#7abf8a;
+    --red:#c05050; --red2:#e07070;
+    --blu:#4a7fa0; --blu2:#6aabcc;
+    --txt1:#f0e8d8; --txt2:#c8c0a8; --txt3:#807060; --txt4:#504838;
+    --mono:'JetBrains Mono','Fira Mono','Consolas',monospace;
+    --line-h: 18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--mono);background:var(--bg0);color:var(--txt1);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:12px;}
+
+  /* ── HEADER ── */
+  .hdr{background:var(--bg1);border-bottom:1px solid var(--brd);padding:5px 10px;display:flex;align-items:center;gap:8px;flex-shrink:0;min-height:38px;flex-wrap:wrap;}
+  .title{font-size:13px;color:var(--acc);font-weight:700;letter-spacing:.04em;white-space:nowrap;}
+  .file-info{font-size:10px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px;}
+  .sep{width:1px;height:18px;background:var(--brd2);flex-shrink:0;}
+  .spacer{flex:1;}
+
+  /* ── BUTTONS ── */
+  .btn{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--brd3);background:var(--bg4);color:#e0d8c8;cursor:pointer;white-space:nowrap;transition:all .14s;}
+  .btn:hover{background:var(--bg5);border-color:var(--acc2);color:#fff;}
+  .btn.acc{border-color:rgba(200,168,75,.7);color:var(--acc3);background:rgba(200,168,75,.14);}
+  .btn.acc:hover{background:rgba(200,168,75,.26);color:#fff0c0;}
+  .btn.grn{border-color:rgba(90,154,108,.7);color:var(--grn2);background:rgba(90,154,108,.14);}
+  .btn.grn:hover{background:rgba(90,154,108,.26);color:#c0ffcc;}
+  .btn.red{border-color:rgba(192,80,80,.6);color:var(--red2);background:rgba(192,80,80,.14);}
+  .btn.red:hover{background:rgba(192,80,80,.26);color:#ffc0c0;}
+
+  /* ── SEARCH BAR ── */
+  .search-bar{background:var(--bg2);border-bottom:1px solid var(--brd);padding:5px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;}
+  .search-bar.hidden{display:none;}
+  .s-inp{font-family:var(--mono);font-size:11px;background:var(--bg3);border:1px solid var(--brd2);border-radius:3px;color:var(--txt1);padding:4px 8px;outline:none;width:240px;}
+  .s-inp:focus{border-color:var(--acc);}
+  .s-inp::placeholder{color:var(--txt4);}
+  .s-info{font-size:10px;color:var(--txt3);white-space:nowrap;min-width:80px;}
+  .s-chk{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--txt3);cursor:pointer;}
+  .s-chk input{accent-color:var(--acc);}
+
+  /* ── STATUS BAR ── */
+  .statusbar{background:var(--bg1);border-top:1px solid var(--brd);padding:2px 10px;display:flex;gap:12px;align-items:center;flex-shrink:0;font-size:10px;color:var(--txt3);}
+  .statusbar b{color:var(--txt2);}
+
+  /* ── DROP ZONE ── */
+  .drop-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border:2px dashed var(--brd2);margin:20px;border-radius:8px;cursor:pointer;transition:all .15s;color:var(--txt3);}
+  .drop-zone:hover,.drop-zone.over{border-color:var(--acc);color:var(--acc2);background:rgba(200,168,75,.03);}
+  .drop-zone .dz-icon{font-size:40px;line-height:1;}
+  .drop-zone .dz-title{font-size:14px;color:var(--txt2);}
+  .drop-zone .dz-sub{font-size:11px;}
+  .drop-zone .dz-hint{font-size:10px;color:var(--txt4);}
+
+  /* ── VIRTUAL EDITOR ── */
+  .editor-wrap{flex:1;display:none;overflow:hidden;position:relative;}
+  .editor-wrap.visible{display:flex;}
+  .editor-scroll{flex:1;overflow:auto;position:relative;}
+  .editor-scroll::-webkit-scrollbar{width:8px;height:8px;}
+  .editor-scroll::-webkit-scrollbar-track{background:var(--bg1);}
+  .editor-scroll::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+  .editor-scroll::-webkit-scrollbar-thumb:hover{background:var(--bg5);}
+
+  /* virtuální výška = počet řádků × výška řádku */
+  .virt-spacer{position:absolute;top:0;left:0;width:1px;}
+  .virt-viewport{position:sticky;top:0;left:0;right:0;height:100%;overflow:visible;}
+
+  .lines-outer{position:absolute;top:0;left:0;right:0;display:flex;}
+  .gutter{flex-shrink:0;background:var(--bg1);border-right:1px solid var(--brd);text-align:right;padding-right:8px;user-select:none;color:var(--txt4);font-size:11px;line-height:var(--line-h);}
+  .lines-content{flex:1;overflow-x:auto;padding:0 12px;}
+  .lines-content::-webkit-scrollbar{height:0;}
+
+  .line{height:var(--line-h);line-height:var(--line-h);white-space:pre;font-size:11px;color:var(--txt2);display:flex;align-items:center;}
+  .line:hover{background:rgba(255,255,255,.03);}
+  .line.hl-match mark{background:rgba(200,168,75,.35);color:var(--acc3);border-radius:2px;padding:0 1px;}
+  .line.hl-current mark{background:rgba(200,168,75,.7);color:#fff;border-radius:2px;padding:0 1px;}
+  .line.goto-line{background:rgba(74,127,160,.12);}
+
+  /* ── LOADING ── */
+  .loading{flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--txt3);}
+  .loading.visible{display:flex;}
+  .progress-bar{width:260px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--acc);border-radius:2px;width:0%;transition:width .1s;}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--bg4);border:1px solid var(--acc);color:var(--acc3);padding:6px 14px;border-radius:5px;font-size:11px;opacity:0;transition:all .2s;z-index:999;pointer-events:none;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ── GOTO DIALOG ── */
+  .dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:center;justify-content:center;}
+  .dialog-overlay.show{display:flex;}
+  .dialog{background:var(--bg2);border:1px solid var(--brd2);border-radius:6px;padding:16px;width:280px;}
+  .dialog h3{font-size:12px;color:var(--acc2);margin-bottom:10px;}
+  .dialog input{font-family:var(--mono);font-size:12px;background:var(--bg3);border:1px solid var(--brd2);border-radius:3px;color:var(--txt1);padding:6px 10px;width:100%;outline:none;margin-bottom:10px;}
+  .dialog input:focus{border-color:var(--acc);}
+  .dialog-btns{display:flex;gap:6px;justify-content:flex-end;}
+
+  input[type=file]{display:none;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="title">📄 File Viewer</div>
+  <div class="sep"></div>
+  <button class="btn acc" onclick="openFilePicker()">⊕ Otevřít soubor</button>
+  <button class="btn" id="btnSearch" onclick="toggleSearch()" disabled title="Ctrl+F">🔍 Hledat</button>
+  <button class="btn" id="btnGoto" onclick="showGoto()" disabled title="Ctrl+G">↗ Jdi na řádek</button>
+  <button class="btn" id="btnWrap" onclick="toggleWrap()" disabled>⇥ Zalamovat</button>
+  <div class="sep"></div>
+  <button class="btn grn" id="btnSave" onclick="saveFile()" disabled>💾 Uložit kopii</button>
+  <div class="spacer"></div>
+  <div class="file-info" id="fileInfo">Žádný soubor</div>
+</div>
+
+<!-- SEARCH BAR -->
+<div class="search-bar hidden" id="searchBar">
+  <input class="s-inp" id="searchInp" placeholder="Hledat… (Enter = další, Shift+Enter = předchozí)" oninput="onSearchInput()">
+  <span class="s-info" id="searchInfo">—</span>
+  <button class="btn" onclick="searchNext()">↓ Další</button>
+  <button class="btn" onclick="searchPrev()">↑ Předchozí</button>
+  <label class="s-chk"><input type="checkbox" id="searchCase" onchange="onSearchInput()"> Aa</label>
+  <label class="s-chk"><input type="checkbox" id="searchRegex" onchange="onSearchInput()"> .*</label>
+  <button class="btn red" onclick="toggleSearch()">✕</button>
+</div>
+
+<!-- DROP ZONE -->
+<div class="drop-zone" id="dropZone"
+     onclick="openFilePicker()"
+     ondragover="onDragOver(event)"
+     ondragleave="onDragLeave(event)"
+     ondrop="onDrop(event)">
+  <div class="dz-icon">📂</div>
+  <div class="dz-title">Přetáhni soubor sem nebo klikni</div>
+  <div class="dz-sub">Funguje i s velkými soubory (22 MB+)</div>
+  <div class="dz-hint">TXT · JSON · CSV · TSV · JS · HTML · jakýkoliv text</div>
+</div>
+
+<!-- LOADING -->
+<div class="loading" id="loadingPane">
+  <div style="font-size:14px;color:var(--txt2)">Načítám soubor…</div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div style="font-size:10px;color:var(--txt4)" id="loadingInfo"></div>
+</div>
+
+<!-- VIRTUAL EDITOR -->
+<div class="editor-wrap" id="editorWrap">
+  <div class="editor-scroll" id="editorScroll">
+    <!-- virtuální spacer nastaví výšku scrollbaru -->
+    <div class="virt-spacer" id="virtSpacer"></div>
+    <!-- obsah se vykresluje absolutně uvnitř scrolleru -->
+    <div class="lines-outer" id="linesOuter">
+      <div class="gutter" id="gutter"></div>
+      <div class="lines-content" id="linesContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <span>Řádky: <b id="sbLines">—</b></span>
+  <span>Sloupec: <b id="sbCol">—</b></span>
+  <span>Velikost: <b id="sbSize">—</b></span>
+  <span>Kódování: <b id="sbEnc">—</b></span>
+  <span id="sbMsg" style="color:var(--acc2)"></span>
+</div>
+
+<!-- GOTO DIALOG -->
+<div class="dialog-overlay" id="gotoOverlay">
+  <div class="dialog">
+    <h3>Přejít na řádek</h3>
+    <input type="number" id="gotoInp" placeholder="číslo řádku…" min="1" onkeydown="gotoKey(event)">
+    <div class="dialog-btns">
+      <button class="btn" onclick="closeGoto()">Zrušit</button>
+      <button class="btn acc" onclick="doGoto()">Přejít</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<input type="file" id="fileInput" onchange="onFileSelect(event)">
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────
+let lines = [];          // pole řádků (string)
+let fileName = '';
+let fileSize = 0;
+let wrapMode = false;
+let searchMatches = [];  // [{line, start, end}]
+let searchIdx = -1;
+let currentFile = null;
+
+// Virtuální scrolling
+const LINE_H = 18;       // px — musí odpovídat CSS var(--line-h)
+const OVERSCAN = 10;     // extra řádky nad/pod viewport
+let visibleStart = 0;
+let visibleEnd = 0;
+
+// ─────────────────────────────────────────────────────────────
+// FILE OPEN
+// ─────────────────────────────────────────────────────────────
+function openFilePicker() {
+  document.getElementById('fileInput').click();
+}
+function onFileSelect(e) {
+  const f = e.target.files[0];
+  if (f) loadFile(f);
+  e.target.value = '';
+}
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.add('over');
+}
+function onDragLeave(e) {
+  document.getElementById('dropZone').classList.remove('over');
+}
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f);
+}
+
+function loadFile(file) {
+  fileName = file.name;
+  fileSize = file.size;
+  currentFile = file;
+
+  showPane('loading');
+  document.getElementById('loadingInfo').textContent = `${file.name} (${fmtSize(file.size)})`;
+  document.getElementById('progressFill').style.width = '0%';
+
+  // Pro velké soubory: čteme přes FileReader s progress
+  const reader = new FileReader();
+  reader.onprogress = (e) => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 80);
+      document.getElementById('progressFill').style.width = pct + '%';
+    }
+  };
+  reader.onload = (e) => {
+    document.getElementById('progressFill').style.width = '90%';
+    // Detekce kódování (zjednodušená)
+    const enc = detectEncoding(e.target.result);
+    setTimeout(() => {
+      splitLines(e.target.result);
+      document.getElementById('progressFill').style.width = '100%';
+      setTimeout(() => initEditor(enc), 80);
+    }, 10);
+  };
+  reader.onerror = () => toast('Chyba při čtení souboru', true);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function detectEncoding(text) {
+  // Pokud se podaří přečíst bez otazníků, je to UTF-8
+  if (text.includes('�')) return 'UTF-8 (s chybami)';
+  return 'UTF-8';
+}
+
+function splitLines(text) {
+  // Rychlé split — pro 22MB je to ok
+  lines = text.split('\n');
+  // Odstraň trailing \r
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].endsWith('\r')) lines[i] = lines[i].slice(0, -1);
+  }
+  // Odstraň poslední prázdný řádek pokud tam je
+  if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+}
+
+function initEditor(enc) {
+  // Status bar
+  document.getElementById('sbLines').textContent = lines.length.toLocaleString('cs');
+  document.getElementById('sbSize').textContent = fmtSize(fileSize);
+  document.getElementById('sbEnc').textContent = enc;
+  document.getElementById('sbCol').textContent = '—';
+  document.getElementById('sbMsg').textContent = '';
+  document.getElementById('fileInfo').textContent = `${fileName} · ${lines.length.toLocaleString('cs')} řádků · ${fmtSize(fileSize)}`;
+
+  // Aktivovat tlačítka
+  ['btnSearch','btnGoto','btnWrap','btnSave'].forEach(id => {
+    document.getElementById(id).disabled = false;
+  });
+
+  // Nastav virtuální výšku
+  const totalH = lines.length * LINE_H;
+  document.getElementById('virtSpacer').style.height = totalH + 'px';
+
+  // Šířka čísla řádku
+  const gutterW = (String(lines.length).length * 8) + 20;
+  document.getElementById('gutter').style.width = gutterW + 'px';
+  document.getElementById('gutter').style.minWidth = gutterW + 'px';
+
+  // Reset search
+  searchMatches = [];
+  searchIdx = -1;
+  document.getElementById('searchInp').value = '';
+  document.getElementById('searchInfo').textContent = '—';
+
+  showPane('editor');
+  renderVisible(0);
+  toast(`Načteno ${lines.length.toLocaleString('cs')} řádků`);
+}
+
+// ─────────────────────────────────────────────────────────────
+// VIRTUAL SCROLL RENDER
+// ─────────────────────────────────────────────────────────────
+function renderVisible(scrollTop) {
+  if (!lines.length) return;
+
+  const scroll = document.getElementById('editorScroll');
+  const viewH = scroll.clientHeight;
+  const st = scrollTop !== undefined ? scrollTop : scroll.scrollTop;
+
+  const firstVisible = Math.floor(st / LINE_H);
+  const lastVisible  = Math.min(lines.length - 1, Math.ceil((st + viewH) / LINE_H));
+
+  const start = Math.max(0, firstVisible - OVERSCAN);
+  const end   = Math.min(lines.length - 1, lastVisible + OVERSCAN);
+
+  if (start === visibleStart && end === visibleEnd) return;
+  visibleStart = start;
+  visibleEnd   = end;
+
+  const topOffset = start * LINE_H;
+
+  // Vygeneruj gutter + content
+  let gutterHtml = '';
+  let contentHtml = '';
+
+  const q = searchMatches.length > 0 ? buildSearchIdx() : null;
+
+  for (let i = start; i <= end; i++) {
+    const lineNum = i + 1;
+    const raw = lines[i];
+    const isGoto = (i === gotoHighlight);
+
+    gutterHtml += `<div style="height:${LINE_H}px;line-height:${LINE_H}px;padding-right:8px">${lineNum}</div>`;
+
+    let content;
+    if (q && q.has(i)) {
+      content = highlightLine(raw, i);
+    } else {
+      content = escHtml(wrapMode ? raw : raw);
+    }
+
+    const cls = isGoto ? 'line goto-line' : (q && q.has(i) ? `line hl-${i === searchMatches[searchIdx]?.line ? 'current' : 'match'}` : 'line');
+    const wstyle = wrapMode ? 'white-space:pre-wrap;word-break:break-all;' : '';
+    contentHtml += `<div class="${cls}" style="height:${wrapMode?'auto':LINE_H+'px'};${wstyle}">${content}</div>`;
+  }
+
+  document.getElementById('gutter').innerHTML = '';
+  document.getElementById('gutter').insertAdjacentHTML('beforeend', gutterHtml);
+  document.getElementById('linesContent').innerHTML = contentHtml;
+
+  // Posuň celý blok
+  document.getElementById('linesOuter').style.top = topOffset + 'px';
+}
+
+let gotoHighlight = -1;
+
+function buildSearchIdx() {
+  const s = new Set();
+  searchMatches.forEach(m => s.add(m.line));
+  return s;
+}
+
+function highlightLine(raw, lineIdx) {
+  const query = document.getElementById('searchInp').value;
+  if (!query) return escHtml(raw);
+
+  const isCurrent = searchMatches[searchIdx]?.line === lineIdx;
+  const caseSens  = document.getElementById('searchCase').checked;
+  const isRegex   = document.getElementById('searchRegex').checked;
+
+  let result = '';
+  let lastIdx = 0;
+  let re;
+  try {
+    re = isRegex
+      ? new RegExp(query, caseSens ? 'g' : 'gi')
+      : new RegExp(escRegex(query), caseSens ? 'g' : 'gi');
+  } catch { return escHtml(raw); }
+
+  const matches = [...raw.matchAll(re)];
+  if (!matches.length) return escHtml(raw);
+
+  // Vyber, které matche jsou "current" (jen první shoda na current řádku pro highlight)
+  const currentMatch = isCurrent ? searchMatches[searchIdx] : null;
+
+  matches.forEach(m => {
+    result += escHtml(raw.slice(lastIdx, m.index));
+    const isCur = currentMatch && m.index === currentMatch.start;
+    result += `<mark class="${isCur ? 'cur' : ''}" style="${isCur ? 'background:rgba(200,168,75,.75);color:#fff' : 'background:rgba(200,168,75,.3);color:var(--acc3)'};border-radius:2px;padding:0 1px">${escHtml(m[0])}</mark>`;
+    lastIdx = m.index + m[0].length;
+  });
+  result += escHtml(raw.slice(lastIdx));
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SCROLL EVENT
+// ─────────────────────────────────────────────────────────────
+let scrollRAF = null;
+document.getElementById('editorScroll').addEventListener('scroll', function() {
+  if (scrollRAF) cancelAnimationFrame(scrollRAF);
+  scrollRAF = requestAnimationFrame(() => renderVisible(this.scrollTop));
+});
+
+window.addEventListener('resize', () => {
+  if (lines.length) renderVisible();
+});
+
+// ─────────────────────────────────────────────────────────────
+// SEARCH
+// ─────────────────────────────────────────────────────────────
+function toggleSearch() {
+  const bar = document.getElementById('searchBar');
+  const hidden = bar.classList.toggle('hidden');
+  if (!hidden) {
+    document.getElementById('searchInp').focus();
+  } else {
+    searchMatches = [];
+    searchIdx = -1;
+    document.getElementById('searchInfo').textContent = '—';
+    visibleStart = -1; visibleEnd = -1;
+    renderVisible();
+  }
+}
+
+let searchDebounce = null;
+function onSearchInput() {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(runSearch, 180);
+}
+
+function runSearch() {
+  const query = document.getElementById('searchInp').value;
+  if (!query || !lines.length) {
+    searchMatches = [];
+    searchIdx = -1;
+    document.getElementById('searchInfo').textContent = query ? '0 výsledků' : '—';
+    visibleStart = -1; visibleEnd = -1;
+    renderVisible();
+    return;
+  }
+
+  const caseSens = document.getElementById('searchCase').checked;
+  const isRegex  = document.getElementById('searchRegex').checked;
+  let re;
+  try {
+    re = isRegex
+      ? new RegExp(query, caseSens ? 'g' : 'gi')
+      : new RegExp(escRegex(query), caseSens ? 'g' : 'gi');
+  } catch (e) {
+    document.getElementById('searchInfo').textContent = 'Chybný regex';
+    return;
+  }
+
+  searchMatches = [];
+  const MAX_MATCHES = 50000;
+  for (let i = 0; i < lines.length && searchMatches.length < MAX_MATCHES; i++) {
+    let m;
+    re.lastIndex = 0;
+    while ((m = re.exec(lines[i])) !== null) {
+      searchMatches.push({ line: i, start: m.index, end: m.index + m[0].length });
+      if (!re.global) break;
+    }
+  }
+
+  searchIdx = searchMatches.length > 0 ? 0 : -1;
+  updateSearchInfo();
+  if (searchIdx >= 0) scrollToMatch(searchIdx);
+  visibleStart = -1; visibleEnd = -1;
+  renderVisible();
+}
+
+function searchNext() {
+  if (!searchMatches.length) return;
+  searchIdx = (searchIdx + 1) % searchMatches.length;
+  updateSearchInfo();
+  scrollToMatch(searchIdx);
+  visibleStart = -1; visibleEnd = -1;
+  renderVisible();
+}
+function searchPrev() {
+  if (!searchMatches.length) return;
+  searchIdx = (searchIdx - 1 + searchMatches.length) % searchMatches.length;
+  updateSearchInfo();
+  scrollToMatch(searchIdx);
+  visibleStart = -1; visibleEnd = -1;
+  renderVisible();
+}
+
+function updateSearchInfo() {
+  const info = document.getElementById('searchInfo');
+  if (!searchMatches.length) { info.textContent = '0 výsledků'; return; }
+  const suffix = searchMatches.length >= 50000 ? ' (limit)' : '';
+  info.textContent = `${searchIdx + 1} / ${searchMatches.length}${suffix}`;
+}
+
+function scrollToMatch(idx) {
+  const m = searchMatches[idx];
+  if (!m) return;
+  const scroll = document.getElementById('editorScroll');
+  const targetTop = m.line * LINE_H;
+  const viewH = scroll.clientHeight;
+  const current = scroll.scrollTop;
+  if (targetTop < current + 40 || targetTop > current + viewH - 40) {
+    scroll.scrollTop = Math.max(0, targetTop - viewH / 2);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// GOTO LINE
+// ─────────────────────────────────────────────────────────────
+function showGoto() {
+  document.getElementById('gotoOverlay').classList.add('show');
+  const inp = document.getElementById('gotoInp');
+  inp.value = '';
+  inp.max = lines.length;
+  inp.placeholder = `1 – ${lines.length.toLocaleString('cs')}`;
+  setTimeout(() => inp.focus(), 50);
+}
+function closeGoto() {
+  document.getElementById('gotoOverlay').classList.remove('show');
+}
+function gotoKey(e) {
+  if (e.key === 'Enter') doGoto();
+  if (e.key === 'Escape') closeGoto();
+}
+function doGoto() {
+  const n = parseInt(document.getElementById('gotoInp').value);
+  if (!n || n < 1 || n > lines.length) { toast('Neplatné číslo řádku', true); return; }
+  closeGoto();
+  gotoHighlight = n - 1;
+  const scroll = document.getElementById('editorScroll');
+  const targetTop = (n - 1) * LINE_H;
+  scroll.scrollTop = Math.max(0, targetTop - scroll.clientHeight / 2);
+  setTimeout(() => { gotoHighlight = -1; visibleStart = -1; visibleEnd = -1; renderVisible(); }, 2000);
+  document.getElementById('sbMsg').textContent = `Řádek ${n}`;
+  setTimeout(() => document.getElementById('sbMsg').textContent = '', 3000);
+  visibleStart = -1; visibleEnd = -1;
+  renderVisible();
+  toast(`Přesunuto na řádek ${n}`);
+}
+
+// ─────────────────────────────────────────────────────────────
+// WRAP TOGGLE
+// ─────────────────────────────────────────────────────────────
+function toggleWrap() {
+  wrapMode = !wrapMode;
+  document.getElementById('btnWrap').textContent = wrapMode ? '↤ Bez zalamování' : '⇥ Zalamovat';
+  // Při wrap mode je virtuální scroll problematický — pro wrap použijeme jednoduché zobrazení
+  if (wrapMode) toast('Zalamování zapnuto — scroll může být pomalejší u velkých souborů');
+  visibleStart = -1; visibleEnd = -1;
+  renderVisible();
+}
+
+// ─────────────────────────────────────────────────────────────
+// SAVE
+// ─────────────────────────────────────────────────────────────
+function saveFile() {
+  if (!currentFile) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(currentFile);
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('Stahování zahájeno');
+}
+
+// ─────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────
+function showPane(which) {
+  document.getElementById('dropZone').style.display    = which === 'drop'    ? 'flex' : 'none';
+  document.getElementById('loadingPane').className     = which === 'loading' ? 'loading visible' : 'loading';
+  document.getElementById('editorWrap').className      = which === 'editor'  ? 'editor-wrap visible' : 'editor-wrap';
+}
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1048576).toFixed(2) + ' MB';
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function escRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+let toastTimer = null;
+function toast(msg, isErr = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = 'toast', 2500);
+}
+
+// ─────────────────────────────────────────────────────────────
+// KLÁVESOVÉ ZKRATKY
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  // Ctrl+F — hledání
+  if (e.ctrlKey && e.key === 'f') {
+    e.preventDefault();
+    if (!lines.length) return;
+    const bar = document.getElementById('searchBar');
+    if (bar.classList.contains('hidden')) toggleSearch();
+    else document.getElementById('searchInp').focus();
+  }
+  // Escape — zavři search / dialog
+  if (e.key === 'Escape') {
+    if (document.getElementById('gotoOverlay').classList.contains('show')) { closeGoto(); return; }
+    if (!document.getElementById('searchBar').classList.contains('hidden')) toggleSearch();
+  }
+  // Ctrl+G — goto
+  if (e.ctrlKey && e.key === 'g') {
+    e.preventDefault();
+    if (lines.length) showGoto();
+  }
+  // Search: Enter / Shift+Enter
+  if (e.key === 'Enter' && document.activeElement === document.getElementById('searchInp')) {
+    e.preventDefault();
+    if (e.shiftKey) searchPrev(); else searchNext();
+  }
+  // Home / End — skok na začátek/konec
+  if (e.ctrlKey && e.key === 'Home') {
+    document.getElementById('editorScroll').scrollTop = 0;
+  }
+  if (e.ctrlKey && e.key === 'End') {
+    const scroll = document.getElementById('editorScroll');
+    scroll.scrollTop = scroll.scrollHeight;
+  }
+});
+
+// Init
+showPane('drop');
+</script>
+</body>
+</html>
