@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strong's Merger</title>
+<style>
+  :root {
+    --bg0:#0f0e0c; --bg1:#141210; --bg2:#1a1714; --bg3:#201d19; --bg4:#2a2620; --bg5:#333028;
+    --brd:#2e2a24; --brd2:#3a3530; --brd3:#4a4540;
+    --acc:#c8a84b; --acc2:#d4b86a; --acc3:#e8d090;
+    --grn:#5a9a6c; --grn2:#7abf8a; --grn3:#a0dfa8;
+    --red:#c05050; --red2:#e07070; --red3:#ffaaaa;
+    --blu:#4a7fa0; --blu2:#6aabcc; --blu3:#a0d0f0;
+    --txt1:#f0e8d8; --txt2:#c8c0a8; --txt3:#807060; --txt4:#504838;
+    --mono:'JetBrains Mono','Fira Mono','Consolas',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--mono);background:var(--bg0);color:var(--txt1);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:12px;}
+
+  /* ── HEADER ── */
+  .app-hdr{background:var(--bg1);border-bottom:1px solid var(--brd);padding:5px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0;min-height:40px;flex-wrap:wrap;}
+  .app-title{font-size:13px;color:var(--acc);font-weight:700;letter-spacing:.05em;white-space:nowrap;}
+  .app-title span{color:var(--txt3);font-weight:400;}
+  .hdr-sep{width:1px;height:18px;background:var(--brd2);flex-shrink:0;}
+
+  /* ── BUTTONS ── */
+  .hbtn{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--brd3);background:var(--bg4);color:#e0d8c8;cursor:pointer;white-space:nowrap;transition:all .14s;}
+  .hbtn:hover{background:var(--bg5);border-color:var(--acc2);color:#fff;}
+  .hbtn:disabled{opacity:.35;cursor:default;pointer-events:none;}
+  .hbtn.grn{border-color:rgba(90,154,108,.7);color:var(--grn3);background:rgba(90,154,108,.14);}
+  .hbtn.grn:hover{background:rgba(90,154,108,.26);color:#c0ffcc;}
+  .hbtn.acc{border-color:rgba(200,168,75,.7);color:var(--acc3);background:rgba(200,168,75,.14);}
+  .hbtn.acc:hover{background:rgba(200,168,75,.26);color:#ffffc0;}
+  .hbtn.sm{font-size:10px;padding:2px 7px;}
+
+  /* ── INPUT ── */
+  .inp{font-family:var(--mono);font-size:11px;background:var(--bg3);border:1px solid var(--brd2);border-radius:3px;color:var(--txt1);padding:4px 8px;outline:none;}
+  .inp:focus{border-color:var(--acc);}
+  .inp::placeholder{color:var(--txt4);}
+
+  /* ── SCROLL ── */
+  .scroll{overflow-y:auto;overflow-x:hidden;}
+  .scroll::-webkit-scrollbar{width:5px;}
+  .scroll::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px;}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--bg4);border:1px solid var(--acc);color:var(--acc3);padding:6px 14px;border-radius:5px;font-size:11px;opacity:0;transition:all .22s;z-index:999;white-space:nowrap;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.err{border-color:var(--red);color:var(--red3);}
+
+  /* ── LAYOUT ── */
+  .main-layout{display:flex;flex:1;overflow:hidden;}
+
+  /* ── CHUNK CHECKBOXES ── */
+  .chunk-cb{font-size:10px;color:var(--txt2);cursor:pointer;display:flex;align-items:center;gap:3px;white-space:nowrap;padding:2px 5px;border:1px solid var(--brd2);border-radius:3px;background:var(--bg3);transition:border-color .12s;}
+  .chunk-cb:hover{border-color:var(--acc2);color:var(--txt1);}
+  .chunk-cb input{accent-color:var(--acc);cursor:pointer;width:12px;height:12px;}
+
+  /* ── ENTRY LIST ── */
+  .entry-list{width:220px;border-right:1px solid var(--brd);display:flex;flex-direction:column;flex-shrink:0;}
+  .el-search{padding:6px 7px;border-bottom:1px solid var(--brd);display:flex;gap:4px;}
+  .el-stats{padding:3px 8px;font-size:10px;color:var(--txt3);border-bottom:1px solid var(--brd);background:var(--bg2);}
+  .el-scroll{flex:1;overflow-y:auto;}
+  .el-item{padding:4px 9px;cursor:pointer;border-bottom:1px solid var(--brd);transition:background .1s;display:flex;gap:6px;align-items:baseline;}
+  .el-item:hover{background:var(--bg3);}
+  .el-item.active{background:var(--bg4);border-left:2px solid var(--acc);padding-left:7px;}
+  .el-key{font-size:10px;color:var(--acc);font-weight:700;flex-shrink:0;min-width:32px;}
+  .el-name{font-size:11px;color:var(--txt2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .el-src{font-size:9px;color:var(--txt4);flex-shrink:0;}
+
+  /* ── FIELD MANAGER ── */
+  .fm-col{width:320px;border-right:1px solid var(--brd);display:flex;flex-direction:column;flex-shrink:0;background:var(--bg1);}
+  .fm-hdr{padding:6px 10px;background:var(--bg2);border-bottom:1px solid var(--brd);font-size:11px;color:var(--acc2);font-weight:700;display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .fm-info{font-size:10px;color:var(--txt3);font-weight:400;margin-left:auto;}
+  .fm-scroll{flex:1;overflow-y:auto;}
+  .fm-item{padding:5px 7px;border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:5px;}
+  .fm-item.disabled-row{opacity:.4;}
+  .fm-cb{width:14px;height:14px;cursor:pointer;accent-color:var(--acc);flex-shrink:0;}
+  .fm-src-badge{font-size:9px;padding:1px 4px;border-radius:2px;flex-shrink:0;font-weight:700;letter-spacing:.03em;}
+  .src-A{background:rgba(74,127,160,.25);color:var(--blu3);border:1px solid rgba(74,127,160,.4);}
+  .src-B{background:rgba(90,154,108,.2);color:var(--grn3);border:1px solid rgba(90,154,108,.35);}
+  .fm-name-inp{flex:1;font-family:var(--mono);font-size:10px;background:var(--bg3);border:1px solid var(--brd2);border-radius:3px;color:var(--txt1);padding:3px 6px;outline:none;min-width:0;}
+  .fm-name-inp:focus{border-color:var(--acc);}
+  .fm-orig{font-size:9px;color:var(--txt4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;flex-shrink:0;}
+  .fm-arrows{display:flex;flex-direction:column;gap:1px;flex-shrink:0;}
+  .fm-arr{font-family:var(--mono);font-size:9px;padding:1px 4px;border-radius:2px;border:1px solid var(--brd2);background:var(--bg4);color:var(--txt3);cursor:pointer;line-height:1.2;}
+  .fm-arr:hover:not(:disabled){background:var(--bg5);color:var(--txt1);}
+  .fm-arr:disabled{opacity:.3;cursor:default;}
+  .fm-footer{padding:6px 8px;border-top:1px solid var(--brd);display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;}
+
+  /* ── PREVIEW ── */
+  .preview-col{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .preview-hdr{padding:8px 14px;border-bottom:1px solid var(--brd);background:var(--bg1);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .pv-key{font-size:16px;font-weight:700;color:var(--acc);}
+  .pv-name{font-size:14px;color:var(--txt1);}
+  .pv-src{font-size:10px;color:var(--txt3);}
+  .pv-nav{margin-left:auto;display:flex;gap:4px;}
+  .pv-body{flex:1;overflow-y:auto;padding:14px 18px;}
+  .pv-field{margin-bottom:10px;border:1px solid var(--brd);border-radius:5px;overflow:hidden;}
+  .pv-field-hdr{padding:3px 9px;background:var(--bg4);border-bottom:1px solid var(--brd);font-size:9px;color:var(--acc2);font-weight:700;letter-spacing:.07em;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
+  .pv-field-val{padding:7px 9px;font-size:11.5px;line-height:1.65;color:var(--txt1);white-space:pre-wrap;}
+  .pv-empty-val{color:var(--txt4);font-style:italic;}
+  .pv-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--txt4);font-size:12px;flex-direction:column;gap:10px;padding:40px;}
+  .pv-empty-big{font-size:32px;}
+</style>
+</head>
+<body>
+
+<div class="app-hdr">
+  <div class="app-title">⟁ Strong's <span>Merger</span></div>
+  <div class="hdr-sep"></div>
+  <button class="hbtn" onclick="document.getElementById('fileA').click()">📂 Načíst A</button>
+  <input type="file" id="fileA" accept=".txt,.json" style="display:none" onchange="handleLoad('A',this)">
+  <span id="nameA" style="font-size:10px;color:var(--blu2)">—</span>
+  <div class="hdr-sep"></div>
+  <button class="hbtn" onclick="document.getElementById('fileB').click()">📂 Načíst B</button>
+  <input type="file" id="fileB" accept=".txt,.json" style="display:none" onchange="handleLoad('B',this)">
+  <span id="nameB" style="font-size:10px;color:var(--grn2)">—</span>
+  <div class="hdr-sep"></div>
+  <button class="hbtn acc" id="btnMerge" onclick="doMerge()" disabled>▶ Sloučit</button>
+  <div class="hdr-sep"></div>
+  <button class="hbtn grn" id="btnExport" onclick="doExport()" disabled>⬇ Export TXT</button>
+  <div class="hdr-sep"></div>
+  <span style="font-size:10px;color:var(--txt3);white-space:nowrap">Části:</span>
+  <label class="chunk-cb" title="G1–G5624 (standardní Strong's řecký)"><input type="checkbox" id="ck_G1" checked> G1–5624</label>
+  <label class="chunk-cb" title="G6000–G9996 (rozšířený řecký I)"><input type="checkbox" id="ck_G6k" checked> G6000–9996</label>
+  <label class="chunk-cb" title="G20001–G21502 (rozšířený řecký II)"><input type="checkbox" id="ck_G20k" checked> G20001–21502</label>
+  <label class="chunk-cb" title="H1–H8674 (standardní Strong's hebrejský)"><input type="checkbox" id="ck_H1" checked> H1–8674</label>
+  <label class="chunk-cb" title="H8675–H9049 (rozšířený hebrejský/aramejský)"><input type="checkbox" id="ck_H8675" checked> H8675–9049</label>
+  <div class="hdr-sep"></div>
+  <button class="hbtn sm" onclick="chunkSelect('G')">Jen G</button>
+  <button class="hbtn sm" onclick="chunkSelect('H')">Jen H</button>
+  <button class="hbtn sm" onclick="chunkSelect('all')">Vše</button>
+  <div class="hdr-sep"></div>
+  <button class="hbtn acc" id="btnSplit" onclick="doExportSplit()" disabled>⬇ Export split</button>
+  <div class="hdr-sep"></div>
+  <span id="mergeStats" style="font-size:10px;color:var(--txt3)"></span>
+</div>
+
+<div class="main-layout">
+
+  <!-- Col 1: Entry list -->
+  <div class="entry-list">
+    <div class="el-search">
+      <input class="inp" id="elSearch" placeholder="Hledat…" oninput="filterEntries()" style="flex:1">
+      <button class="hbtn sm" onclick="document.getElementById('elSearch').value='';filterEntries()">✕</button>
+    </div>
+    <div class="el-stats" id="elStats">— načti soubory —</div>
+    <div class="el-scroll scroll" id="elList"></div>
+  </div>
+
+  <!-- Col 2: Field manager -->
+  <div class="fm-col">
+    <div class="fm-hdr">
+      Pole &amp; pořadí
+      <span class="fm-info" id="fmInfo">— po sloučení —</span>
+    </div>
+    <div class="fm-scroll scroll" id="fmList"></div>
+    <div class="fm-footer">
+      <button class="hbtn sm" onclick="fmEnableAll()">Vše ✓</button>
+      <button class="hbtn sm" onclick="fmDisableAll()">Vše ✕</button>
+      <button class="hbtn sm" onclick="fmResetNames()">Reset názvů</button>
+      <button class="hbtn sm" onclick="fmMoveAFirst()">A první</button>
+      <button class="hbtn sm" onclick="fmMoveBFirst()">B první</button>
+    </div>
+  </div>
+
+  <!-- Col 3: Preview -->
+  <div class="preview-col">
+    <div id="pvEmpty" class="pv-empty">
+      <div class="pv-empty-big">⟁</div>
+      <div style="color:var(--txt3)">Načti soubory A a B → klikni ▶ Sloučit</div>
+      <div>pak vyber heslo ze seznamu</div>
+    </div>
+    <div id="pvPane" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div class="preview-hdr">
+        <div class="pv-key" id="pvKey"></div>
+        <div class="pv-name" id="pvName"></div>
+        <div class="pv-src" id="pvSrc"></div>
+        <div class="pv-nav">
+          <button class="hbtn sm" onclick="navEntry(-1)" title="Alt+↑">▲</button>
+          <button class="hbtn sm" onclick="navEntry(1)" title="Alt+↓">▼</button>
+        </div>
+      </div>
+      <div class="pv-body scroll" id="pvBody"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+let toastTimer=null;
+function toast(msg,err=false){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast show'+(err?' err':'');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3200);
+}
+
+// ── DATA ──────────────────────────────────────────────────────────
+let dataA=new Map(), dataB=new Map();
+let allKeys=[], filteredKeys=[], selectedKey=null;
+// fieldConfig: [{origName, displayName, enabled, src:'A'|'B'}]
+let fieldConfig=[];
+
+function parseTXT(text){
+  const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+
+  // Průchod 1: detekce skutečných názvů polí ze vzorku prvních 25 hesel
+  const counts=new Map();
+  let sampleEntries=0, inSample=false;
+  for(const line of lines){
+    if(/^[GH]\d+\s*\|/.test(line)){inSample=true;sampleEntries++;if(sampleEntries>25)break;continue;}
+    if(!inSample||!line.trim())continue;
+    const m=line.match(/^([^:\r\n]{1,50}):/);
+    if(m){const n=m[1].trim();counts.set(n,(counts.get(n)||0)+1);}
+  }
+  // Přijmeme pole, která se vyskytnou alespoň 2× ve vzorku
+  const validFields=new Set([...counts].filter(([,c])=>c>=2).map(([n])=>n));
+  // Pokud vzorek příliš malý (< 3 hesel), přijmeme vše co se vyskytne 1×
+  if(sampleEntries<3)[...counts].forEach(([n])=>validFields.add(n));
+
+  // Průchod 2: parsování s whitelistem polí
+  const result=new Map(); let cur=null;
+  for(const line of lines){
+    const hm=line.match(/^([GH]\d+)\s*\|\s*(.*)$/);
+    if(hm){if(cur)result.set(cur.key,cur);cur={key:hm[1],name:hm[2].trim(),fields:[]};continue;}
+    if(!cur)continue;
+    const fm=line.match(/^([^:\r\n]{1,50}):/);
+    if(fm&&validFields.has(fm[1].trim())){
+      const name=fm[1].trim();
+      const value=line.slice(line.indexOf(':')+1).trimStart();
+      cur.fields.push({name,value:value.trim()});continue;
+    }
+    if(!line.trim())continue;
+    if(cur.fields.length>0)cur.fields[cur.fields.length-1].value+='\n'+line.trim();
+  }
+  if(cur)result.set(cur.key,cur);
+  return result;
+}
+
+async function handleLoad(ab,input){
+  const file=input.files[0];if(!file)return;
+  try{
+    const text=await file.text();
+    const data=parseTXT(text);
+    if(ab==='A'){dataA=data;document.getElementById('nameA').textContent=file.name;}
+    else{dataB=data;document.getElementById('nameB').textContent=file.name;}
+    document.getElementById('btnMerge').disabled=!(dataA.size||dataB.size);
+    input.value='';
+    toast(`✓ ${ab}: načteno ${data.size} hesel`);
+  }catch(e){toast('Chyba parsování: '+e.message,true);}
+}
+
+// ── MERGE ─────────────────────────────────────────────────────────
+function doMerge(){
+  if(!dataA.size&&!dataB.size){toast('Načti alespoň jeden soubor',true);return;}
+
+  // Collect all keys sorted numerically
+  const keySet=new Set([...dataA.keys(),...dataB.keys()]);
+  allKeys=[...keySet].sort((a,b)=>{
+    return(parseInt(a.replace(/\D/g,''))||0)-(parseInt(b.replace(/\D/g,''))||0);
+  });
+
+  // Collect ordered field names per source (preserve first-seen order)
+  const fieldsA=[], seenA=new Set();
+  for(const[,e]of dataA)e.fields.forEach(f=>{if(!seenA.has(f.name)){seenA.add(f.name);fieldsA.push(f.name);}});
+  const fieldsB=[], seenB=new Set();
+  for(const[,e]of dataB)e.fields.forEach(f=>{if(!seenB.has(f.name)){seenB.add(f.name);fieldsB.push(f.name);}});
+
+  // Preserve existing display names if already configured
+  const prevNames=new Map(fieldConfig.map(f=>[f.src+'|'+f.origName, f.displayName]));
+  const prevEnabled=new Map(fieldConfig.map(f=>[f.src+'|'+f.origName, f.enabled]));
+
+  fieldConfig=[];
+  for(const name of fieldsA){
+    const k='A|'+name;
+    fieldConfig.push({origName:name,displayName:prevNames.get(k)??name,enabled:prevEnabled.get(k)??true,src:'A'});
+  }
+  for(const name of fieldsB){
+    const k='B|'+name;
+    fieldConfig.push({origName:name,displayName:prevNames.get(k)??name,enabled:prevEnabled.get(k)??true,src:'B'});
+  }
+
+  filteredKeys=[...allKeys];
+  selectedKey=null;
+
+  const onlyA=allKeys.filter(k=>dataA.has(k)&&!dataB.has(k)).length;
+  const onlyB=allKeys.filter(k=>!dataA.has(k)&&dataB.has(k)).length;
+  const both=allKeys.length-onlyA-onlyB;
+  document.getElementById('mergeStats').textContent=
+    `${allKeys.length} hesel (AB:${both} A:${onlyA} B:${onlyB}) · ${fieldConfig.length} polí`;
+  document.getElementById('btnExport').disabled=false;
+  document.getElementById('btnSplit').disabled=false;
+
+  renderFieldManager();
+  renderEntryList();
+  renderPreview();
+  toast(`✓ Sloučeno: ${allKeys.length} hesel, ${fieldConfig.length} polí`);
+}
+
+// ── FIELD MANAGER ─────────────────────────────────────────────────
+function renderFieldManager(){
+  const en=fieldConfig.filter(f=>f.enabled).length;
+  document.getElementById('fmInfo').textContent=`${en}/${fieldConfig.length} aktivních`;
+  const list=document.getElementById('fmList');
+  list.innerHTML=fieldConfig.map((f,i)=>`
+    <div class="fm-item${f.enabled?'':' disabled-row'}">
+      <input type="checkbox" class="fm-cb" ${f.enabled?'checked':''}
+        onchange="fmToggle(${i},this.checked)" title="Zahrnout pole">
+      <span class="fm-src-badge src-${f.src}">${f.src}</span>
+      <input class="fm-name-inp" value="${esc(f.displayName)}"
+        onchange="fmRename(${i},this.value)" title="Zobrazovaný název (původ: ${esc(f.origName)})">
+      <div class="fm-arrows">
+        <button class="fm-arr" onclick="fmMove(${i},-1)" ${i===0?'disabled':''}>▲</button>
+        <button class="fm-arr" onclick="fmMove(${i},1)" ${i===fieldConfig.length-1?'disabled':''}>▼</button>
+      </div>
+    </div>`).join('');
+}
+
+function fmToggle(i,val){fieldConfig[i].enabled=val;renderFieldManager();renderPreview();}
+function fmRename(i,val){fieldConfig[i].displayName=val.trim()||fieldConfig[i].origName;renderPreview();}
+function fmMove(i,dir){
+  const ni=i+dir;
+  if(ni<0||ni>=fieldConfig.length)return;
+  [fieldConfig[i],fieldConfig[ni]]=[fieldConfig[ni],fieldConfig[i]];
+  renderFieldManager();renderPreview();
+}
+function fmEnableAll(){fieldConfig.forEach(f=>f.enabled=true);renderFieldManager();renderPreview();}
+function fmDisableAll(){fieldConfig.forEach(f=>f.enabled=false);renderFieldManager();renderPreview();}
+function fmResetNames(){fieldConfig.forEach(f=>f.displayName=f.origName);renderFieldManager();renderPreview();}
+function fmMoveAFirst(){
+  const a=fieldConfig.filter(f=>f.src==='A');
+  const b=fieldConfig.filter(f=>f.src==='B');
+  fieldConfig=[...a,...b];renderFieldManager();renderPreview();
+}
+function fmMoveBFirst(){
+  const a=fieldConfig.filter(f=>f.src==='A');
+  const b=fieldConfig.filter(f=>f.src==='B');
+  fieldConfig=[...b,...a];renderFieldManager();renderPreview();
+}
+
+// ── ENTRY LIST ────────────────────────────────────────────────────
+function filterEntries(){
+  const q=(document.getElementById('elSearch').value||'').toLowerCase();
+  if(!q){filteredKeys=[...allKeys];}
+  else{
+    filteredKeys=allKeys.filter(k=>{
+      if(k.toLowerCase().includes(q))return true;
+      const a=dataA.get(k),b=dataB.get(k);
+      const name=(a||b)?.name||'';
+      if(name.toLowerCase().includes(q))return true;
+      if(a?.fields.some(f=>f.value.toLowerCase().includes(q)||f.name.toLowerCase().includes(q)))return true;
+      if(b?.fields.some(f=>f.value.toLowerCase().includes(q)||f.name.toLowerCase().includes(q)))return true;
+      return false;
+    });
+  }
+  renderEntryList();
+}
+
+function renderEntryList(){
+  const q=document.getElementById('elSearch').value;
+  document.getElementById('elStats').textContent=q?`${filteredKeys.length} / ${allKeys.length}`:`${allKeys.length} hesel`;
+  const list=document.getElementById('elList');
+  list.innerHTML=filteredKeys.map(k=>{
+    const a=dataA.get(k),b=dataB.get(k);
+    const name=(a||b)?.name||'';
+    const src=a&&b?'AB':a?'A':'B';
+    return`<div class="el-item${k===selectedKey?' active':''}" onclick="selectEntry('${esc(k)}')">
+      <span class="el-key">${esc(k)}</span>
+      <span class="el-name">${esc(name)}</span>
+      <span class="el-src">${src}</span>
+    </div>`;
+  }).join('');
+}
+
+function selectEntry(key){
+  selectedKey=key;
+  renderEntryList();
+  renderPreview();
+  setTimeout(()=>{
+    const idx=filteredKeys.indexOf(key);
+    const items=document.querySelectorAll('.el-item');
+    if(items[idx])items[idx].scrollIntoView({block:'nearest'});
+  },0);
+}
+
+function navEntry(dir){
+  if(!filteredKeys.length)return;
+  let idx=selectedKey?filteredKeys.indexOf(selectedKey):-1;
+  if(idx<0)idx=dir>0?-1:filteredKeys.length;
+  idx=Math.max(0,Math.min(filteredKeys.length-1,idx+dir));
+  selectEntry(filteredKeys[idx]);
+  setTimeout(()=>{
+    const items=document.querySelectorAll('.el-item');
+    if(items[idx])items[idx].scrollIntoView({block:'nearest'});
+  },0);
+}
+
+// ── PREVIEW ───────────────────────────────────────────────────────
+function renderPreview(){
+  const empty=document.getElementById('pvEmpty');
+  const pane=document.getElementById('pvPane');
+
+  if(!selectedKey||!allKeys.length){
+    empty.style.display='flex';pane.style.display='none';return;
+  }
+  empty.style.display='none';pane.style.display='flex';
+
+  const a=dataA.get(selectedKey),b=dataB.get(selectedKey);
+  const name=(a||b)?.name||'';
+  const src=a&&b?'zdroj A + B':a?'pouze zdroj A':'pouze zdroj B';
+  document.getElementById('pvKey').textContent=selectedKey;
+  document.getElementById('pvName').textContent=name;
+  document.getElementById('pvSrc').textContent=src;
+
+  const mapA=new Map((a?.fields||[]).map(f=>[f.name,f.value]));
+  const mapB=new Map((b?.fields||[]).map(f=>[f.name,f.value]));
+
+  const enabledFields=fieldConfig.filter(f=>f.enabled);
+  if(!enabledFields.length){
+    document.getElementById('pvBody').innerHTML='<div style="color:var(--txt4);padding:20px;font-size:11px">Žádná aktivní pole — aktivuj je v panelu vlevo.</div>';
+    return;
+  }
+
+  const html=enabledFields.map(f=>{
+    const val=(f.src==='A'?mapA:mapB).get(f.origName)??'';
+    const empty=!val;
+    return`<div class="pv-field">
+      <div class="pv-field-hdr">
+        ${esc(f.displayName)}
+        <span class="fm-src-badge src-${f.src}" style="font-size:8px">${f.src}</span>
+        ${f.displayName!==f.origName?`<span style="font-size:8px;color:var(--txt4)">(${esc(f.origName)})</span>`:''}
+      </div>
+      <div class="pv-field-val${empty?' pv-empty-val':''}">${empty?'(prázdné)':esc(val)}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('pvBody').innerHTML=html;
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────
+function doExport(){
+  if(!allKeys.length){toast('Nejdřív slouč soubory',true);return;}
+  const enabled=fieldConfig.filter(f=>f.enabled);
+  if(!enabled.length){toast('Žádná aktivní pole k exportu',true);return;}
+  const lines=[];
+  for(const key of allKeys){
+    const a=dataA.get(key),b=dataB.get(key);
+    const name=(a||b)?.name||'';
+    lines.push(`${key} | ${name}`);
+    const mapA=new Map((a?.fields||[]).map(f=>[f.name,f.value]));
+    const mapB=new Map((b?.fields||[]).map(f=>[f.name,f.value]));
+    for(const f of enabled){
+      const val=(f.src==='A'?mapA:mapB).get(f.origName)??'';
+      if(val)lines.push(`${f.displayName}: ${val}`);
+    }
+    lines.push('');
+  }
+  const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
+  const a2=document.createElement('a');
+  a2.href=URL.createObjectURL(blob);
+  a2.download='strong_merged.txt';
+  a2.click();URL.revokeObjectURL(a2.href);
+  toast(`✓ Exportováno ${allKeys.length} hesel`);
+}
+
+// ── EXPORT SPLIT ──────────────────────────────────────────────────
+const CHUNKS=[
+  {id:'G1',    pfx:'G', lo:1,     hi:5624,  label:'G1-G5624'},
+  {id:'G6k',   pfx:'G', lo:6000,  hi:9996,  label:'G6000-G9996'},
+  {id:'G20k',  pfx:'G', lo:20001, hi:21502, label:'G20001-G21502'},
+  {id:'H1',    pfx:'H', lo:1,     hi:8674,  label:'H1-H8674'},
+  {id:'H8675', pfx:'H', lo:8675,  hi:9049,  label:'H8675-H9049'},
+];
+
+function chunkSelect(mode){
+  CHUNKS.forEach(c=>{
+    const el=document.getElementById('ck_'+c.id);
+    if(el) el.checked=(mode==='all'||c.pfx===mode);
+  });
+}
+
+function buildEntryLines(key,enabled){
+  const a=dataA.get(key),b=dataB.get(key);
+  const name=(a||b)?.name||'';
+  const lines=[`${key} | ${name}`];
+  const mapA=new Map((a?.fields||[]).map(f=>[f.name,f.value]));
+  const mapB=new Map((b?.fields||[]).map(f=>[f.name,f.value]));
+  for(const f of enabled){
+    const val=(f.src==='A'?mapA:mapB).get(f.origName)??'';
+    if(val)lines.push(`${f.displayName}: ${val}`);
+  }
+  lines.push('');
+  return lines;
+}
+
+function doExportSplit(){
+  if(!allKeys.length){toast('Nejdřív slouč soubory',true);return;}
+  const enabled=fieldConfig.filter(f=>f.enabled);
+  if(!enabled.length){toast('Žádná aktivní pole k exportu',true);return;}
+
+  const selected=CHUNKS.filter(c=>document.getElementById('ck_'+c.id)?.checked);
+  if(!selected.length){toast('Vyber alespoň jednu část',true);return;}
+
+  let delay=0, count=0;
+  for(const chunk of selected){
+    const keys=allKeys.filter(k=>{
+      const num=parseInt(k.replace(/\D/g,''))||0;
+      return k[0]===chunk.pfx&&num>=chunk.lo&&num<=chunk.hi;
+    });
+    if(!keys.length) continue;
+    const lines=keys.flatMap(k=>buildEntryLines(k,enabled));
+    const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    setTimeout(()=>{
+      const a2=document.createElement('a');
+      a2.href=url;a2.download=`strong_${chunk.label}.txt`;
+      a2.click();URL.revokeObjectURL(url);
+    },delay);
+    delay+=400; count++;
+  }
+  if(count) toast(`✓ Exportuji ${count} souborů (${selected.map(c=>c.label).join(', ')})`);
+  else toast('Žádná hesla ve vybraných částech',true);
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────
+document.addEventListener('keydown',ev=>{
+  if(ev.altKey&&ev.key==='ArrowDown'){ev.preventDefault();navEntry(1);}
+  if(ev.altKey&&ev.key==='ArrowUp'){ev.preventDefault();navEntry(-1);}
+});
+</script>
+</body>
+</html>
