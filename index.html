@@ -381,16 +381,46 @@
         <select id="providerRunMainGroqModel" aria-label="Hlavní model Groq" title="Hlavní model Groq"></select>
       </div>
       <div class="mobl-set-row">
+        <label id="settingsGroqMaxLabel">Groq · Limit tokenů</label>
+        <select id="settingsMaxTokens_groq" aria-label="Groq max tokenů" title="Groq max tokenů">
+          <option value="1000">1 000</option>
+          <option value="2000">2 000</option>
+          <option value="4096">4 096</option>
+          <option value="8000">8 000</option>
+          <option value="16000">16 000</option>
+        </select>
+      </div>
+      <div class="mobl-set-row">
         <label id="settingsSecondaryGeminiLabel">Sekundární model (Gemini)</label>
         <select id="providerRunSecondaryGeminiModel" aria-label="Sekundární model Gemini" title="Sekundární model Gemini"></select>
+      </div>
+      <div class="mobl-set-row">
+        <label id="settingsGeminiMaxLabel">Gemini · Limit tokenů</label>
+        <select id="settingsMaxTokens_gemini" aria-label="Gemini max tokenů" title="Gemini max tokenů">
+          <option value="1000">1 000</option>
+          <option value="2000">2 000</option>
+          <option value="4096">4 096</option>
+          <option value="8192">8 192</option>
+          <option value="16384">16 384</option>
+        </select>
       </div>
       <div class="mobl-set-row">
         <label id="settingsSecondaryOpenrouterLabel">Sekundární model (OpenRouter)</label>
         <select id="providerRunSecondaryOpenrouterModel" aria-label="Sekundární model OpenRouter" title="Sekundární model OpenRouter"></select>
       </div>
-   <div class="modal-btns">
-     <button class="mobl-btn grn" id="btnSettingsSave" onclick="closeSettingsModal()" aria-label="Uložit">✓ Uložit</button>
-     <button class="mobl-btn cancel" id="btnSettingsClose" onclick="closeSettingsModal()" aria-label="Zavřít">✕ Zavřít</button>
+      <div class="mobl-set-row">
+        <label id="settingsOpenrouterMaxLabel">OpenRouter · Limit tokenů</label>
+        <select id="settingsMaxTokens_openrouter" aria-label="OpenRouter max tokenů" title="OpenRouter max tokenů">
+          <option value="1000">1 000</option>
+          <option value="2000">2 000</option>
+          <option value="4096">4 096</option>
+          <option value="8192">8 192</option>
+          <option value="16384">16 384</option>
+        </select>
+      </div>
+   <div class="prompt-actions" style="margin-top: 16px;">
+     <button class="prompt-btn cancel" id="btnSettingsClose" onclick="closeSettingsModal()" aria-label="Zavřít">✕ Zavřít</button>
+     <button class="prompt-btn ok" id="btnSettingsSave" onclick="closeSettingsModal()" aria-label="Uložit">✓ Uložit</button>
    </div>
  </div>
 </div>

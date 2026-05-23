@@ -540,6 +540,9 @@ function applyUiLanguage() {
     setText('settingsSecondaryGeminiToggleText', t('settings.enableFixes'));
     setText('settingsSecondaryOpenrouterLabel', t('settings.secondaryOpenrouter'));
     setText('settingsSecondaryOpenrouterToggleText', t('settings.enableFixes'));
+    setText('settingsGroqMaxLabel', t('settings.groqTokenLimit'));
+    setText('settingsGeminiMaxLabel', t('settings.geminiTokenLimit'));
+    setText('settingsOpenrouterMaxLabel', t('settings.openrouterTokenLimit'));
     setText('settingsBatchLabel', t('settings.batch'));
     setAttr('batchSizeRunMobile', 'aria-label', t('settings.batch'));
     setAttr('batchSizeRunMobile', 'title', t('settings.batch'));

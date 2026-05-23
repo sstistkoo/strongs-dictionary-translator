@@ -245,6 +245,15 @@ function getDefaultContentTagForTarget(targetRaw) {
 
  function showSettingsModal() {
    initPipelineModelSelectorsInSettingsModal();
+  const MAX_TOKENS_DEFAULTS = { groq: 4096, gemini: 8192, openrouter: 8192 };
+  ['groq', 'gemini', 'openrouter'].forEach(prov => {
+    const saved = localStorage.getItem(`strong_ai_max_tokens_${prov}`) || String(MAX_TOKENS_DEFAULTS[prov]);
+    const el = document.getElementById(`settingsMaxTokens_${prov}`);
+    if (el) {
+      el.value = saved;
+      if (el.value !== saved) el.value = String(MAX_TOKENS_DEFAULTS[prov]);
+    }
+  });
   document.getElementById('settingsModal').classList.add('show');
 }
 
@@ -255,6 +264,10 @@ function closeSettingsModal() {
   if (mainGroq) setPipelineModelForProvider('groq', mainGroq);
   if (secGemini) setPipelineModelForProvider('gemini', secGemini);
   if (secOpenRouter) setPipelineModelForProvider('openrouter', secOpenRouter);
+  ['groq', 'gemini', 'openrouter'].forEach(prov => {
+    const el = document.getElementById(`settingsMaxTokens_${prov}`);
+    if (el?.value) safeSetLocalStorage(`strong_ai_max_tokens_${prov}`, el.value, 'settingsModals');
+  });
    updateAutoProviderCountdowns();
    const providerEl = document.getElementById('provider');
    if (providerEl) providerEl.value = 'groq';
