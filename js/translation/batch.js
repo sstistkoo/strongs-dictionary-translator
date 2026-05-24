@@ -400,12 +400,7 @@ function getSecondaryProviderModelCandidates(prov) {
 }
 
 function getSecondaryProviderModelQueue(prov) {
-  const uniqueQueue = getSecondaryProviderModelCandidates(prov);
-  if (!uniqueQueue.length) return [];
-  const idx = Math.max(0, Number(state.providerModelRotationIndex?.[prov] || 0));
-  const shift = idx % uniqueQueue.length;
-  state.providerModelRotationIndex[prov] = idx + 1;
-  return [...uniqueQueue.slice(shift), ...uniqueQueue.slice(0, shift)];
+  return getSecondaryProviderModelCandidates(prov);
 }
 
 function getSecondaryNextOperationState(prov) {

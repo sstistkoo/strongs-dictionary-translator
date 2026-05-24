@@ -4,11 +4,18 @@ import { escHtml } from '../utils.js';
 import { BAD_TRANSLATIONS } from '../badTranslations.js';
 
 export function createLimitsApi({ getCurrentApiKey, getModelTestSelectedModelForProvider, showToast }) {
+function setLimitsActiveTab(prov) {
+  document.querySelectorAll('#limitsTabs .limits-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.prov === prov);
+  });
+}
+
 function showLimitsModal() {
   const prov = document.getElementById('provider').value;
   const model = document.getElementById('model').value;
   const modelLabel = document.getElementById('model')?.selectedOptions?.[0]?.text || model;
-  
+
+  setLimitsActiveTab(prov);
   document.getElementById('limitsProviderInfo').textContent = t('limits.providerInfo', {
     provider: PROVIDERS[prov]?.label || prov,
     model: modelLabel
@@ -16,7 +23,22 @@ function showLimitsModal() {
   document.getElementById('limitsContent').innerHTML = `<div class="limits-loading">${t('limits.loading')}</div>`;
   document.getElementById('limitsNote').style.display = 'none';
   document.getElementById('limitsModal').classList.add('show');
-  
+
+  fetchLimits(prov, model);
+}
+
+function switchLimitsProvider(prov) {
+  const model = PROVIDERS[prov]?.models?.[0]?.[0] || '';
+  const modelLabel = model;
+
+  setLimitsActiveTab(prov);
+  document.getElementById('limitsProviderInfo').textContent = t('limits.providerInfo', {
+    provider: PROVIDERS[prov]?.label || prov,
+    model: modelLabel
+  });
+  document.getElementById('limitsContent').innerHTML = `<div class="limits-loading">${t('limits.loading')}</div>`;
+  document.getElementById('limitsNote').style.display = 'none';
+
   fetchLimits(prov, model);
 }
 
@@ -120,8 +142,6 @@ async function fetchLimits(prov, model) {
         fetchOpenRouterLimits(apiKey),
         fetchOpenRouterCredits(apiKey).catch(() => null)
       ]);
-      content.innerHTML = renderOpenRouterLimits(keyData, creditsData);
-      // Add rate limit info for OpenRouter
       const rateLimitInfo = getOpenRouterRateLimits(keyData);
       content.innerHTML = renderOpenRouterLimits(keyData, creditsData) + rateLimitInfo;
       note.style.display = 'block';
@@ -167,7 +187,7 @@ function renderLimitsTable(limits) {
   if (limits.rpm) rows.push(`<div class="limits-row"><span class="limits-label">RPM (requests/min)</span><span class="limits-value">${limits.rpm}</span></div>`);
   if (limits.rpd) rows.push(`<div class="limits-row"><span class="limits-label">RPD (requests/day)</span><span class="limits-value">${limits.rpd.toLocaleString()}</span></div>`);
   if (limits.tpm) rows.push(`<div class="limits-row"><span class="limits-label">TPM (tokens/min)</span><span class="limits-value">${limits.tpm.toLocaleString()}</span></div>`);
-  if (limits.tpd) rows.push(`<div class="limits-row"><span class="limits-label">TPD (tokens/day)</span><span class="limits-value">${limits.tpd.toLocaleString()}</span></div>`);
+  if (limits.tpd != null && limits.tpd !== 0) rows.push(`<div class="limits-row"><span class="limits-label">TPD (tokens/day)</span><span class="limits-value">${limits.tpd.toLocaleString()}</span></div>`);
   return rows.join('');
 }
 

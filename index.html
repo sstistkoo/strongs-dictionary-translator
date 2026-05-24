@@ -431,6 +431,11 @@
         <button class="close-modal-btn" onclick="closeLimitsModal()" aria-label="Zavřít limity">×</button>
         <div class="limits-title" id="limitsTitle">📊 Limity providera</div>
        <div class="limits-provider" id="limitsProviderInfo">Provider: —</div>
+       <div class="limits-tabs" id="limitsTabs">
+         <button class="limits-tab" data-prov="groq" onclick="switchLimitsProvider('groq')">⚡ Groq</button>
+         <button class="limits-tab" data-prov="gemini" onclick="switchLimitsProvider('gemini')">✨ Gemini</button>
+         <button class="limits-tab" data-prov="openrouter" onclick="switchLimitsProvider('openrouter')">🌐 OpenRouter</button>
+       </div>
        <div id="limitsContent">
          <div class="limits-loading" id="limitsLoadingText">Načítám...</div>
        </div>

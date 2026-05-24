@@ -82,7 +82,7 @@ export function createAutoApi(deps) {
      if (countdown) countdown.textContent = '—';
      // Resetovat i sequential tlačítko pokud bylo aktivní
      const btnAutoSeq = document.getElementById('btnAutoSeq');
-     if (btnAutoSeq) btnAutoSeq.textContent = '↻ Postupně';
+     if (btnAutoSeq) { btnAutoSeq.textContent = '↻ Postupně'; btnAutoSeq.classList.remove('active'); }
      updateAutoProviderCountdowns();
      stopElapsedTimer();
    }
@@ -321,7 +321,7 @@ export function createAutoApi(deps) {
               const countdown = document.getElementById('countdown');
               if (countdown) countdown.textContent = String(remSec);
             }
-            const left = Math.min(500, waitUntil - Date.now());
+            const left = Math.max(0, Math.min(500, waitUntil - Date.now()));
             await new Promise(resolve => setTimeout(resolve, left));
           }
           setProviderStatus(prov, 'překládám...');
@@ -583,6 +583,7 @@ export function createAutoApi(deps) {
     state.autoStepRunning = false;
     clearTimeout(state.autoTimer);
     clearInterval(state.autoCountTimer);
+    stopAutoProviderCountdownTicker();
     const btn = document.getElementById('btnAutoSeq');
     if (btn) { btn.textContent = '↻ Postupně'; btn.classList.remove('active'); }
     if (window.innerWidth <= 600) {

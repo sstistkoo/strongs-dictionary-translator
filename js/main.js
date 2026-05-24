@@ -4951,6 +4951,15 @@ window.toggleMenu = function() {
     const menuPanel = document.getElementById('menuPanel');
     menuPanel.classList.toggle('is-hidden');
   };
+
+document.addEventListener('click', function(e) {
+  const menuPanel = document.getElementById('menuPanel');
+  const btnMenu = document.getElementById('btnMenu');
+  if (!menuPanel || menuPanel.classList.contains('is-hidden')) return;
+  if (!menuPanel.contains(e.target) && !btnMenu.contains(e.target)) {
+    menuPanel.classList.add('is-hidden');
+  }
+});
 // Pri skryt� tabu tak� flushni, aby se nic neztratilo
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') saveProgress.flush();

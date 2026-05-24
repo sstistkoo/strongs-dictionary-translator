@@ -1349,6 +1349,25 @@ hr.div { border: none; border-top: 1px solid var(--brd); margin: 18px 0; }
     background: var(--bg3);
     border-radius: 4px;
   }
+  .limits-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .limits-tab {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--brd);
+    border-radius: 4px;
+    color: var(--txt3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 5px 4px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .limits-tab:hover { background: var(--bg); color: var(--txt); }
+  .limits-tab.active { background: var(--acc); border-color: var(--acc); color: var(--bg); font-weight: 700; }
   .limits-row {
     display: flex;
     justify-content: space-between;
