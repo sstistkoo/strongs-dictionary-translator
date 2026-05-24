@@ -442,6 +442,19 @@
       <div class="limits-note is-hidden" id="limitsNote">
          ℹ️ <span id="limitsNoteText"></span>
        </div>
+      <details class="limits-codes-help">
+        <summary>⚠️ Kódy chyb — co znamenají?</summary>
+        <div class="limits-codes-list">
+          <div class="limits-code-row"><span class="limits-code-badge c429">429</span><span>Too Many Requests — překročen rate limit. Počkej minutu nebo sniž frekvenci.</span></div>
+          <div class="limits-code-row"><span class="limits-code-badge c524">524</span><span>Cloudflare Timeout — server (Groq) neodpověděl včas. Zkus znovu za chvíli.</span></div>
+          <div class="limits-code-row"><span class="limits-code-badge c503">503</span><span>Service Unavailable — provider je přetížen nebo v údržbě.</span></div>
+          <div class="limits-code-row"><span class="limits-code-badge c502">502</span><span>Bad Gateway — chyba proxy/CDN vrstvy, obvykle přechodná.</span></div>
+          <div class="limits-code-row"><span class="limits-code-badge c504">504</span><span>Gateway Timeout — požadavek trval příliš dlouho, timeout na síťové vrstvě.</span></div>
+          <div class="limits-code-row"><span class="limits-code-badge c500">500</span><span>Internal Server Error — chyba na straně providera.</span></div>
+          <div class="limits-code-row"><span class="limits-code-badge c401">401</span><span>Unauthorized — neplatný nebo chybějící API klíč.</span></div>
+          <div class="limits-code-row"><span class="limits-code-badge c403">403</span><span>Forbidden — API klíč nemá oprávnění nebo byl zablokován.</span></div>
+        </div>
+      </details>
       <button class="modal-btn cancel modal-btn-full modal-btn-top-gap" id="btnLimitsClose" onclick="closeLimitsModal()">✕ Zavřít</button>
      </div>
    </div>

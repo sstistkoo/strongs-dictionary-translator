@@ -423,7 +423,7 @@ function getOpenRouterRateLimits(keyData) {
     showLimitsModal, closeLimitsModal,
     showHelpModal, closeHelpModal,
     showBadTranslationsModal, closeBadTranslationsModal, filterBadTranslations,
-    fetchLimits,
+    fetchLimits, switchLimitsProvider,
   };
 }
 

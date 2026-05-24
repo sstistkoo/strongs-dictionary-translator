@@ -1926,6 +1926,7 @@ const showBadTranslationsModal = limitsApi.showBadTranslationsModal;
 const closeBadTranslationsModal = limitsApi.closeBadTranslationsModal;
 const filterBadTranslations = limitsApi.filterBadTranslations;
 const fetchLimits = limitsApi.fetchLimits;
+const switchLimitsProvider = limitsApi.switchLimitsProvider;
 
 const previewApi = createPreviewApi({
   showToast,
@@ -4436,6 +4437,7 @@ window.closePreviewModalSafe = closePreviewModalSafe;
 window.closeFailedModalSafe = closeFailedModalSafe;
 window.showLimitsModal = showLimitsModal;
 window.closeLimitsModal = closeLimitsModal;
+window.switchLimitsProvider = switchLimitsProvider;
 window.showHelpModal = showHelpModal;
 window.closeHelpModal = closeHelpModal;
 window.showBadTranslationsModal = showBadTranslationsModal;

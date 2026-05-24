@@ -1313,6 +1313,8 @@ hr.div { border: none; border-top: 1px solid var(--brd); margin: 18px 0; }
      max-width: 380px;
      width: 90%;
      position: relative;
+     max-height: 85vh;
+     overflow-y: auto;
    }
    .model-test-modal-box {
      max-width: 860px;
@@ -1400,6 +1402,49 @@ hr.div { border: none; border-top: 1px solid var(--brd); margin: 18px 0; }
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
   }
+  .limits-codes-help {
+    margin-top: 10px;
+    border: 1px solid var(--brd);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .limits-codes-help summary {
+    padding: 7px 10px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--txt3);
+    cursor: pointer;
+    background: var(--bg3);
+    user-select: none;
+  }
+  .limits-codes-help summary:hover { color: var(--txt); }
+  .limits-codes-list {
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background: var(--bg3);
+  }
+  .limits-code-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--txt3);
+    line-height: 1.4;
+  }
+  .limits-code-badge {
+    flex-shrink: 0;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+  }
+  .limits-code-badge.c429 { background: #7c2d12; color: #fb923c; }
+  .limits-code-badge.c524 { background: #451a03; color: #f97316; }
+  .limits-code-badge.c503, .limits-code-badge.c502, .limits-code-badge.c504, .limits-code-badge.c500 { background: #1e1b4b; color: #a5b4fc; }
+  .limits-code-badge.c401, .limits-code-badge.c403 { background: #450a0a; color: #f87171; }
   .key-switch-row {
     display: flex;
     gap: 8px;

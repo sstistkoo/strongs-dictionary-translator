@@ -36,7 +36,8 @@
       "Bash(gh repo *)",
       "WebFetch(domain:github.com)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\\\\js\\\\translation\" -Name)",
-      "Bash(git diff *)"
+      "Bash(git diff *)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }
