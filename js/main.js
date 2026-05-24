@@ -4925,7 +4925,9 @@ function printRecentAICalls() {
 
  // Open topic repair modal for all missing topics
  function startTopicRepairFlowForMissing() {
-   const keys = Object.keys(state.translated).filter(key => getState(key) === 'missing_topic');
+   const missingTopic = Object.keys(state.translated).filter(key => getState(key) === 'missing_topic');
+   const defQuality = state._defQualityKeys ? [...state._defQualityKeys] : [];
+   const keys = [...new Set([...missingTopic, ...defQuality])];
    if (!keys.length) {
      showToast(t('toast.topicRepair.noEligible'));
      return;
@@ -4933,6 +4935,153 @@ function printRecentAICalls() {
    startTopicRepairFlow(keys);
  }
  window.startTopicRepairFlowForMissing = startTopicRepairFlowForMissing;
+
+ async function startTopicRepairFlowFromClipboard() {
+   let text;
+   try { text = await navigator.clipboard.readText(); } catch { showToast('Nelze číst schránku'); return; }
+   const keys = [...text.matchAll(/[GH]\d+/gi)].map(m => m[0].toUpperCase());
+   const unique = [...new Set(keys)];
+   if (!unique.length) { showToast('Ve schránce nejsou žádná Strong čísla'); return; }
+   startTopicRepairFlow(unique);
+ }
+ window.startTopicRepairFlowFromClipboard = startTopicRepairFlowFromClipboard;
+
+ // --- KONTROLA DEFINICE ---
+ const TR_CHECK_TYPES = [
+   {type:'not_translated', label:'Nepřeloženo', color:'var(--red2)'},
+   {type:'missing_refs',   label:'Refs',        color:'var(--blu2)'},
+   {type:'truncated',      label:'Zkráceno',    color:'var(--grn2)'},
+ ];
+ let trCheckResults = [];
+ let trCheckFilter = 'all';
+
+ function extractTrCVs(text) {
+   const cvs = new Set();
+   const groups = String(text || '').match(/\[[^\]]+\]/g) || [];
+   for (const g of groups) {
+     (g.match(/\d+:\d+/g) || []).forEach(cv => cvs.add(cv));
+   }
+   return cvs;
+ }
+
+ function checkTrEntry(key) {
+   const e = state.entryMap.get(key) || {};
+   const enText = String(e.definice || e.def || '').trim();
+   const czText = String((state.translated[key] || {}).definice || '').trim();
+   const issues = [];
+   if (!czText || czText === '—') {
+     issues.push({type:'not_translated', detail:'Definice není přeložena'});
+     return issues;
+   }
+   if (enText && enText !== '—') {
+     const enCVs = extractTrCVs(enText);
+     if (enCVs.size > 0) {
+       const czCVs = extractTrCVs(czText);
+       const missing = [...enCVs].filter(cv => !czCVs.has(cv));
+       if (missing.length)
+         issues.push({type:'missing_refs', detail:`Chybí ${missing.length} ref: ${missing.slice(0,6).join(', ')}${missing.length>6?'…':''}`});
+     }
+     if (enText.length > 200 && czText.length < enText.length * 0.35) {
+       const pct = Math.round(czText.length / enText.length * 100);
+       issues.push({type:'truncated', detail:`CZ je ${pct}% délky EN (${czText.length} vs ${enText.length} znaků)`});
+     }
+   }
+   return issues;
+ }
+
+ function runTrCheck() {
+   const keys = state.entries.map(e => e.key).filter(k => state.translated[k] && !state.translated[k].skipped);
+   trCheckResults = [];
+   for (const key of keys) {
+     const issues = checkTrEntry(key);
+     if (issues.length) trCheckResults.push({key, issues});
+   }
+   const ok = keys.length - trCheckResults.length;
+   const sub = document.getElementById('trCheckSubtitle');
+   if (sub) sub.textContent = `${trCheckResults.length} problémů · ${ok} OK · ${keys.length} celkem`;
+   trCheckFilter = 'all';
+   renderTrCheckResults();
+   document.getElementById('trCheckPanel').style.right = '0';
+   showToast(`✓ Kontrola: ${trCheckResults.length} hesel s problémy z ${keys.length}`);
+ }
+
+ function closeTrCheckPanel() {
+   document.getElementById('trCheckPanel').style.right = '-400px';
+ }
+
+ function filterTrCheck(type) {
+   trCheckFilter = type;
+   TR_CHECK_TYPES.forEach(t => {
+     const b = document.getElementById('trChkFlt_' + t.type);
+     if (b) b.style.background = t.type === type ? 'var(--bg5)' : '';
+   });
+   const ba = document.getElementById('trChkFlt_all');
+   if (ba) ba.style.background = type === 'all' ? 'var(--bg5)' : '';
+   renderTrCheckResults();
+ }
+
+ function renderTrCheckResults() {
+   const filtered = trCheckFilter === 'all'
+     ? trCheckResults
+     : trCheckResults.filter(r => r.issues.some(i => i.type === trCheckFilter));
+   TR_CHECK_TYPES.forEach(t => {
+     const cnt = trCheckResults.filter(r => r.issues.some(i => i.type === t.type)).length;
+     const b = document.getElementById('trChkFlt_' + t.type);
+     if (b) b.textContent = `${t.label} (${cnt})`;
+   });
+   const ba = document.getElementById('trChkFlt_all');
+   if (ba) ba.textContent = `Vše (${trCheckResults.length})`;
+   const footer = document.getElementById('trCheckFooter');
+   if (footer) footer.textContent = `${filtered.length} hesel`;
+   const list = document.getElementById('trCheckList');
+   if (!list) return;
+   if (!filtered.length) {
+     list.innerHTML = `<div style="padding:16px;color:var(--txt4);font-size:11px;text-align:center">${
+       trCheckFilter === 'all' ? '✓ Žádné problémy!' : 'Žádné výsledky pro tento filtr'}</div>`;
+     return;
+   }
+   list.innerHTML = filtered.map(r => {
+     const e = state.entryMap.get(r.key) || {};
+     const name = e.greek || '';
+     const badges = r.issues.map(i => {
+       const ct = TR_CHECK_TYPES.find(t => t.type === i.type);
+       return `<span title="${i.detail}" style="font-size:8px;padding:1px 5px;border-radius:2px;background:rgba(0,0,0,.35);color:${ct?.color||'var(--txt3)'};">${ct?.label||i.type}</span>`;
+     }).join(' ');
+     return `<div class="list-item${r.key === state.activeKey ? ' active' : ''}" onclick="window._trCheckGoto('${r.key}')" style="cursor:pointer;padding:5px 8px;height:auto;position:static;display:flex;flex-direction:column;gap:3px;">
+       <div style="display:flex;gap:5px;align-items:baseline;">
+         <span style="font-weight:600;font-size:12px;color:var(--acc)">${r.key}</span>
+         <span style="font-size:11px;color:var(--txt3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+       </div>
+       <div style="display:flex;gap:3px;flex-wrap:wrap;">${badges}</div>
+     </div>`;
+   }).join('');
+ }
+
+ function copyTrCheckKeys() {
+   const filtered = trCheckFilter === 'all'
+     ? trCheckResults
+     : trCheckResults.filter(r => r.issues.some(i => i.type === trCheckFilter));
+   if (!filtered.length) { showToast('Žádná hesla ke kopírování'); return; }
+   navigator.clipboard.writeText(filtered.map(r => r.key).join('\n')).then(
+     () => showToast(`📋 Zkopírováno ${filtered.length} hesel`),
+     () => showToast('Chyba kopírování')
+   );
+ }
+
+ function sendTrCheckToRepair() {
+   const filtered = trCheckFilter === 'all'
+     ? trCheckResults
+     : trCheckResults.filter(r => r.issues.some(i => i.type === trCheckFilter));
+   if (!filtered.length) { showToast('Žádná hesla k opravě'); return; }
+   startTopicRepairFlow(filtered.map(r => r.key));
+ }
+
+ window.runTrCheck = runTrCheck;
+ window.closeTrCheckPanel = closeTrCheckPanel;
+ window.filterTrCheck = filterTrCheck;
+ window.copyTrCheckKeys = copyTrCheckKeys;
+ window.sendTrCheckToRepair = sendTrCheckToRepair;
+ window._trCheckGoto = key => { showDetail(key); };
 
   // Cleanup on page unload - auto-save progress
   window.addEventListener('beforeunload', () => {

@@ -298,11 +298,28 @@ function updateTopicRepairSelectCounts() {
   }
 }
 
+function countDefRefs(text) {
+  return (String(text || '').match(/\d+:\d+/g) || []).length;
+}
+
 function buildTopicRepairTasks(keys) {
   const tasks = [];
   for (const key of keys) {
     const t = state.translated[key] || {};
-    const missing = getMissingTopicsForRepair(t);
+    const e = state.entryMap.get(key) || {};
+    const missing = getMissingTopicsForRepair(t).filter(topicId => {
+      // přeskočit téma pokud originál nemá zdrojový text (stejná logika jako "Originál: —" v UI)
+      if (topicId === 'vyznam') return !!getTopicOriginText(key, topicId);
+      return true;
+    });
+    // Přidej definice do opravy pokud chybí biblické refs oproti EN originálu
+    if (!missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
+      const srcRefs = countDefRefs(e.definice || e.def || '');
+      const czRefs = countDefRefs(t.definice || '');
+      if (srcRefs > 0 && czRefs < srcRefs) {
+        missing.push('definice');
+      }
+    }
     // Debug log
     if (window.DEBUG_TOPIC_REPAIR) {
       console.log('TopicRepair build:', key, 'translated:', t, 'missing:', missing);
@@ -396,6 +413,7 @@ function renderTopicRepairModal() {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
          <h2 style="color:var(--acc);margin:0">🗔 ${t('topicRepair.modal.title', { count: topicRepairState.tasks.length })}</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="hbtn" onclick="window.startTopicRepairFlowFromClipboard&&window.startTopicRepairFlowFromClipboard()" title="Načte Strong čísla ze schránky a přidá je k opravě">📋 Ze schránky</button>
           <button class="hbtn" id="topicRepairMinimizeBtn" onclick="minimizeTopicRepairModal()">${t('topicRepair.modal.minimize')}</button>
           <button class="hbtn" onclick="closeTopicRepairModalOnly()">${t('topicRepair.modal.closeWindow')}</button>
         </div>
@@ -601,7 +619,7 @@ async function processTopicRepairQueue() {
   try {
     while (state.topicRepairState && !state.topicRepairState.closed) {
       if (state.topicRepairState.repairStrategy !== 'sequential') break;
-      if (state.topicRepairState.paused) {
+      if (state.paused) {
         await sleepMs(350);
         continue;
       }
@@ -620,7 +638,7 @@ async function processTopicRepairQueue() {
        updateTopicRepairModalUI();
        let success = false;
        for (const prov of enabledProviders) {
-         if (!state.topicRepairState || state.topicRepairState.closed || state.topicRepairState.paused) break;
+         if (!state.topicRepairState || state.topicRepairState.closed || state.paused) break;
          const model = getPipelineModelForProvider(prov) || document.getElementById('model')?.value || '';
          const apiKey = getCurrentApiKey(prov);
          if (!apiKey) continue;
@@ -735,9 +753,24 @@ nextTask.detectedTopics = [];
        }
        updateTopicRepairModalUI();
        await saveProgress();
-       // Interval mezi úkoly — fallback na DOM nebo 20s pokud state.currentInterval není nastaven
+       // Interval s živým odpočítáváním — nastavit cooldown a zároveň přímo psát do UI každých 500ms
        const seqInterval = Math.max(5, Number(state.currentInterval) || parseInt(document.getElementById('intervalRun')?.value, 10) || parseInt(document.getElementById('interval')?.value, 10) || 20);
-       await sleepMs(seqInterval * 1000);
+       const _waitUntil = Date.now() + seqInterval * 1000;
+       const _cdProv = nextTask.provider || enabledProviders[enabledProviders.length - 1] || '';
+       const _cdLabel = _cdProv === 'groq' ? 'Groq' : (_cdProv === 'gemini' ? 'Google' : 'OpenRouter');
+       // Nastavit providerCooldownUntil aby getProviderCooldownLeftSec vrátilo správnou hodnotu
+       if (_cdProv && state.providerCooldownUntil) state.providerCooldownUntil[_cdProv] = _waitUntil;
+       while (!state.topicRepairState?.closed && !state.paused && Date.now() < _waitUntil) {
+         const remSec = Math.ceil((_waitUntil - Date.now()) / 1000);
+         // Přímý zápis do UI — překryje ticker aby se zobrazovalo každých 500ms
+         if (_cdProv) {
+           const _line = document.getElementById(`topicRepairProvider_${_cdProv}`);
+           if (_line) _line.textContent = `${_cdLabel}: ${remSec}s`;
+         }
+         await sleepMs(Math.min(500, Math.max(50, _waitUntil - Date.now())));
+       }
+       // Reset cooldown po skončení čekání
+       if (_cdProv && state.providerCooldownUntil) state.providerCooldownUntil[_cdProv] = 0;
     }
     updateTopicRepairModalUI();
     if (state.topicRepairState && !state.topicRepairState.closed) {
@@ -888,9 +921,21 @@ function applyTopicRepairSelected() {
   // Odstraň tasky kde je téma nyní úspěšně vyplněno
   if (applied > 0) {
     topicRepairState.tasks = topicRepairState.tasks.filter(task => {
-      if (task.hidden) return true; // zachovat manually approved
+      if (task.hidden) return true;
       const translatedValue = state.translated[task.key]?.[task.topicId];
-      return !hasMeaningfulValue(translatedValue);
+      if (!hasMeaningfulValue(translatedValue)) return true; // pole pořád prázdné — zachovat
+      // Pro definice zkontroluj i kvalitu (refs, zkráceno) — mohlo být přidáno jako def quality task
+      if (task.topicId === 'definice') {
+        const e = state.entryMap?.get(task.key) || {};
+        const enDef = String(e.definice || e.def || '');
+        const enRefs = enDef.match(/\d+:\d+/g) || [];
+        if (enRefs.length > 0) {
+          const czRefs = new Set(String(translatedValue).match(/\d+:\d+/g) || []);
+          if (enRefs.some(r => !czRefs.has(r))) return true; // refs pořád chybí
+        }
+        if (enDef.length > 200 && String(translatedValue).length < enDef.length * 0.35) return true; // pořád zkráceno
+      }
+      return false;
     });
   }
   if (applied > 0) {
@@ -1143,7 +1188,7 @@ function buildTopicRepairBatchHeslaText(keys, topicId) {
 
     switch (topicId) {
       case 'definice':
-        if (e.definice || e.def) lines.push(`DEF: ${e.definice || e.def || ''}`);
+        if (e.definice || e.def) lines.push(`D: ${e.definice || e.def || ''}`);
         break;
       case 'vyznam':
         const curMean = String(e.vyznamCz || e.cz || '').trim();
@@ -1758,7 +1803,7 @@ function buildTopicPrompt(key, topicId) {
 
   let extraLines = [];
   if (topicId === 'definice') {
-    if (e.definice || e.def) extraLines.push(`DEF: ${e.definice || e.def}`);
+    if (e.definice || e.def) extraLines.push(`D: ${e.definice || e.def}`);
   }
 
   const sourceText = [firstLine, ...extraLines].join('\n');
@@ -2673,7 +2718,7 @@ function buildTopicDataBlockForDetail(key, topicId) {
 
   switch (topicId) {
     case 'definice':
-      if (origVal) lines.push(`DEF: ${origVal}`);
+      if (origVal) lines.push(`D: ${origVal}`);
       break;
     case 'vyznam':
       if (currentVal) lines.push(`V: ${currentVal}`);

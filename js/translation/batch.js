@@ -76,7 +76,7 @@ function buildTopicRepairBatchHeslaText(keys, topicId) {
     lines.push(`${idPart} | ${wordPart}${tvarPart}`);
     switch (topicId) {
       case 'definice':
-        if (e.definice || e.def) lines.push(`DEF: ${e.definice || e.def || ''}`);
+        if (e.definice || e.def) lines.push(`D: ${e.definice || e.def || ''}`);
         break;
       case 'vyznam':
         const curMean = String(e.vyznamCz || e.cz || '').trim();

@@ -97,23 +97,36 @@ export function createHeaderApi({ state, t, getTranslationStateForKey, storeKey,
      const elFailed = document.getElementById('failedCount');
      if (elFailed) elFailed.textContent = failedCount > 0 ? `(${failedCount})` : '';
 
-     // Počet úkolů opravy témat — jen záznamy ve stavu missing_topic (1–2 chybějící témata)
+     // Počet úkolů opravy témat — missing_topic + definice s chybějícími refs nebo zkráceným překladem
      let topicRepairTaskCount = 0;
      const topics = ['definice','vyznam','kjv','puvod','specialista'];
+     const defQualityKeys = new Set();
      for (const key of Object.keys(state.translated)) {
-       if (getTranslationStateForKey(key) !== 'missing_topic') continue;
-       const t = state.translated[key];
-       for (const topicId of topics) {
-         const val = String(t[topicId] || '').trim();
-         if (!hasMeaningfulValue(val)) {
-           topicRepairTaskCount++;
-           continue;
-         }
-         if (topicId === 'definice' && isDefinitionLowQuality(val)) {
-           topicRepairTaskCount++;
+       const tr = state.translated[key];
+       if (!tr || tr.skipped) continue;
+       const isMissingTopic = getTranslationStateForKey(key) === 'missing_topic';
+       if (isMissingTopic) {
+         for (const topicId of topics) {
+           const val = String(tr[topicId] || '').trim();
+           if (!hasMeaningfulValue(val)) { topicRepairTaskCount++; continue; }
+           if (topicId === 'definice' && isDefinitionLowQuality(val)) topicRepairTaskCount++;
          }
        }
+       // Kontrola kvality definice (refs, zkráceno) — pro všechna přeložená hesla
+       const czDef = String(tr.definice || '').trim();
+       if (!hasMeaningfulValue(czDef) || isMissingTopic) continue;
+       const e = state.entryMap?.get(key) || {};
+       const enDef = String(e.definice || e.def || '').trim();
+       if (!enDef) continue;
+       const enRefs = enDef.match(/\d+:\d+/g) || [];
+       if (enRefs.length > 0) {
+         const czRefs = new Set(czDef.match(/\d+:\d+/g) || []);
+         if (enRefs.some(r => !czRefs.has(r))) { defQualityKeys.add(key); continue; }
+       }
+       if (enDef.length > 200 && czDef.length < enDef.length * 0.35) defQualityKeys.add(key);
      }
+     topicRepairTaskCount += defQualityKeys.size;
+     state._defQualityKeys = defQualityKeys;
      const elTopic = document.getElementById('topicRepairCount');
      if (elTopic) elTopic.textContent = topicRepairTaskCount > 0 ? `(${topicRepairTaskCount})` : '';
    }

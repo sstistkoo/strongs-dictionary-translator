@@ -184,6 +184,7 @@
         <!-- Vždy viditelné: stavové/akční tlačítka -->
         <button class="hbtn red" id="btnFailedEntries" onclick="showFailedEntries()" title="Zobrazit neúspěšné překlady" aria-label="Zobrazit neúspěšné překlady">⚠ Neus. <span id="failedCount"></span></button>
         <button class="hbtn" id="btnTopicRepair" onclick="startTopicRepairFlowForMissing()" title="Opravit chybějící témata" aria-label="Opravit chybějící témata">🗔 <span id="topicRepairLabel">Oprava témat</span> <span id="topicRepairCount"></span></button>
+        <button class="hbtn" id="btnTrCheck" onclick="runTrCheck()" title="Zkontrolovat přeložené definice (refs, délka)" aria-label="Kontrola definice">🔍 Kontrola</button>
         <button class="hbtn" id="btnTranslatorPrompts" onclick="showTranslatorPromptsModal()" title="Otevřít knihovnu promptů" aria-label="Otevřít knihovnu promptů">🛠 Tools</button>
         <!-- Rozbalovací menu -->
         <div class="dropdown">
@@ -1141,4 +1142,26 @@
       document.getElementById('translatorPromptsModal').classList.remove('show');
     }
   </script>
+  <!-- CHECK PANEL -->
+  <div id="trCheckPanel" style="position:fixed;top:0;right:-400px;width:380px;height:100vh;background:var(--bg1);border-left:1px solid var(--brd);display:flex;flex-direction:column;z-index:151;transition:right .2s ease;box-shadow:-4px 0 16px rgba(0,0,0,.4);">
+    <div style="padding:7px 10px;background:var(--bg2);border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11px;color:var(--red3);font-weight:700">🔍 Kontrola definice</div>
+        <div id="trCheckSubtitle" style="font-size:10px;color:var(--txt3)">—</div>
+      </div>
+      <button class="hbtn sm" onclick="copyTrCheckKeys()" title="Kopírovat Strong čísla do schránky">📋</button>
+      <button class="hbtn sm" onclick="sendTrCheckToRepair()" title="Poslat problematická hesla do Opravy témat">🗔 Opravit</button>
+      <button class="hbtn sm" onclick="runTrCheck()">⟳</button>
+      <button class="hbtn sm" onclick="closeTrCheckPanel()">✕</button>
+    </div>
+    <div style="padding:5px 7px;border-bottom:1px solid var(--brd);flex-shrink:0;display:flex;gap:3px;flex-wrap:wrap;">
+      <button class="hbtn sm" id="trChkFlt_all" onclick="filterTrCheck('all')">Vše</button>
+      <button class="hbtn sm" id="trChkFlt_not_translated" onclick="filterTrCheck('not_translated')" style="color:var(--red2)">Nepřeloženo</button>
+      <button class="hbtn sm" id="trChkFlt_missing_refs" onclick="filterTrCheck('missing_refs')" style="color:var(--blu2)">Refs</button>
+      <button class="hbtn sm" id="trChkFlt_truncated" onclick="filterTrCheck('truncated')" style="color:var(--grn2)">Zkráceno</button>
+    </div>
+    <div id="trCheckList" style="flex:1;overflow-y:auto;"></div>
+    <div style="padding:5px 8px;border-top:1px solid var(--brd);font-size:10px;color:var(--txt3);flex-shrink:0" id="trCheckFooter">—</div>
+  </div>
+
   <script type="module" src="js/main.js"></script>
