@@ -275,6 +275,27 @@
 
 </div>
 
+<!-- MISSING ENTRIES PANEL -->
+<div id="missingPanel" style="
+  position:fixed;top:0;right:-360px;width:340px;height:100vh;
+  background:var(--bg1);border-left:1px solid var(--brd);
+  display:flex;flex-direction:column;z-index:150;
+  transition:right .2s ease;box-shadow:-4px 0 16px rgba(0,0,0,.4);">
+  <div style="padding:7px 10px;background:var(--bg2);border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:6px;flex-shrink:0;">
+    <div style="flex:1;min-width:0;">
+      <div id="missingTitle" style="font-size:11px;color:var(--acc2);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+      <div id="missingSubtitle" style="font-size:10px;color:var(--txt3)">—</div>
+    </div>
+    <button class="hbtn sm" onclick="closeMissingPanel()">✕</button>
+  </div>
+  <div style="padding:5px 7px;border-bottom:1px solid var(--brd);flex-shrink:0;display:flex;gap:4px;">
+    <input class="inp" id="missingSearch" placeholder="Hledat…" oninput="filterMissingList()" style="flex:1;font-size:11px;">
+    <button class="hbtn sm" onclick="document.getElementById('missingSearch').value='';filterMissingList()">✕</button>
+  </div>
+  <div id="missingList" style="flex:1;overflow-y:auto;" class="scroll"></div>
+  <div style="padding:5px 8px;border-top:1px solid var(--brd);font-size:10px;color:var(--txt3);flex-shrink:0" id="missingFooter"></div>
+</div>
+
 <!-- FILE VIEWER MODAL -->
 <div class="fv-overlay" id="fvOverlay">
   <div class="fv-hdr">
@@ -383,6 +404,7 @@ async function handleLoad(ab,input){
       document.getElementById('nameB').textContent=file.name;
       document.getElementById('btnViewB').disabled=false;
     }
+    invalidateFmCache();
     document.getElementById('btnMerge').disabled=!(dataA.size||dataB.size);
     input.value='';
     toast(`✓ ${ab}: načteno ${data.size} hesel`);
@@ -439,22 +461,60 @@ function doMerge(){
 }
 
 // ── FIELD MANAGER ─────────────────────────────────────────────────
+// Cache počtů — přepočítá se jen při změně dat
+let _fmCountCache=null;
+function getFmCounts(){
+  if(_fmCountCache)return _fmCountCache;
+  const cache=new Map(); // klíč: "src|origName" → count
+  const countIn=(data,src)=>{
+    const total=data.size;
+    const counts=new Map();
+    for(const entry of data.values()){
+      for(const f of entry.fields){
+        if(f.value&&f.value.trim()){
+          const k=src+'|'+f.name;
+          counts.set(k,(counts.get(k)||0)+1);
+        }
+      }
+    }
+    counts.forEach((v,k)=>cache.set(k,{count:v,total}));
+  };
+  countIn(dataA,'A');
+  countIn(dataB,'B');
+  _fmCountCache=cache;
+  return cache;
+}
+function invalidateFmCache(){_fmCountCache=null;}
+
 function renderFieldManager(){
   const en=fieldConfig.filter(f=>f.enabled).length;
   document.getElementById('fmInfo').textContent=`${en}/${fieldConfig.length} aktivních`;
+  const counts=getFmCounts();
   const list=document.getElementById('fmList');
-  list.innerHTML=fieldConfig.map((f,i)=>`
-    <div class="fm-item${f.enabled?'':' disabled-row'}">
+  list.innerHTML=fieldConfig.map((f,i)=>{
+    const k=f.src+'|'+f.origName;
+    const c=counts.get(k);
+    const isFull=c&&c.count===c.total;
+    const countHtml=c
+      ? `<span
+          title="${c.count} hesel má pole · ${c.total-c.count} chybí — klikni pro seznam"
+          style="font-size:9px;color:${isFull?'var(--grn2)':'var(--acc2)'};white-space:nowrap;flex-shrink:0;${isFull?'':'cursor:pointer;text-decoration:underline dotted'}"
+          ${isFull?'':` onclick="showMissingPanel('${esc(f.origName)}','${f.src}')"`}
+        >${c.count}/${c.total}</span>`
+      : `<span style="font-size:9px;color:var(--txt4);flex-shrink:0">—</span>`;
+    return`<div class="fm-item${f.enabled?'':' disabled-row'}">
       <input type="checkbox" class="fm-cb" ${f.enabled?'checked':''}
         onchange="fmToggle(${i},this.checked)" title="Zahrnout pole">
       <span class="fm-src-badge src-${f.src}">${f.src}</span>
       <input class="fm-name-inp" value="${esc(f.displayName)}"
         onchange="fmRename(${i},this.value)" title="Zobrazovaný název (původ: ${esc(f.origName)})">
+      ${countHtml}
       <div class="fm-arrows">
         <button class="fm-arr" onclick="fmMove(${i},-1)" ${i===0?'disabled':''}>▲</button>
         <button class="fm-arr" onclick="fmMove(${i},1)" ${i===fieldConfig.length-1?'disabled':''}>▼</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function fmToggle(i,val){fieldConfig[i].enabled=val;renderFieldManager();renderPreview();}
@@ -663,6 +723,67 @@ function doExportSplit(){
   else toast('Žádná hesla ve vybraných částech',true);
 }
 
+// ── MISSING ENTRIES PANEL ─────────────────────────────────────────
+let missingKeys=[];
+
+function showMissingPanel(fieldName, src){
+  const data=src==='A'?dataA:dataB;
+  const total=data.size;
+
+  // Najdi hesla kde pole chybí nebo je prázdné
+  missingKeys=[];
+  for(const[key,entry]of data){
+    const f=entry.fields.find(f=>f.name===fieldName);
+    if(!f||!f.value.trim()) missingKeys.push(key);
+  }
+
+  const missing=missingKeys.length;
+  document.getElementById('missingTitle').textContent=`Chybí: ${fieldName} (${src})`;
+  document.getElementById('missingSubtitle').textContent=`${missing} hesel bez pole · ${total-missing} má · ${total} celkem`;
+  document.getElementById('missingSearch').value='';
+  document.getElementById('missingFooter').textContent=`Klikni na heslo pro detail`;
+
+  renderMissingList(missingKeys);
+
+  // Otevři panel
+  document.getElementById('missingPanel').style.right='0';
+}
+
+function closeMissingPanel(){
+  document.getElementById('missingPanel').style.right='-360px';
+}
+
+function filterMissingList(){
+  const q=document.getElementById('missingSearch').value.toLowerCase();
+  if(!q){renderMissingList(missingKeys);return;}
+  const filtered=missingKeys.filter(k=>{
+    if(k.toLowerCase().includes(q))return true;
+    const e=dataA.get(k)||dataB.get(k);
+    return e?.name?.toLowerCase().includes(q);
+  });
+  renderMissingList(filtered);
+}
+
+function renderMissingList(keys){
+  const list=document.getElementById('missingList');
+  if(!keys.length){
+    list.innerHTML='<div style="padding:16px;color:var(--txt4);font-size:11px;text-align:center">Žádné výsledky</div>';
+    document.getElementById('missingFooter').textContent='0 hesel';
+    return;
+  }
+  document.getElementById('missingFooter').textContent=`${keys.length} hesel`;
+  list.innerHTML=keys.map(k=>{
+    const e=dataA.get(k)||dataB.get(k);
+    const name=e?.name||'';
+    const src=dataA.has(k)&&dataB.has(k)?'AB':dataA.has(k)?'A':'B';
+    return`<div class="el-item${k===selectedKey?' active':''}" onclick="selectEntry('${esc(k)}');closeMissingPanel()">
+      <span class="el-key">${esc(k)}</span>
+      <span class="el-name">${esc(name)}</span>
+      <span class="el-src" style="font-size:9px">${src}</span>
+    </div>`;
+  }).join('');
+}
+
 // ── BIBLICKÉ REFS EXTRAKCE ────────────────────────────────────────
 // Regex: [Book.ch:v] nebo [Book.ch:v, ch:v, ch:v] — také varianty s ; mezerou
 const BIBLE_REF_RE=/\[[A-Za-záčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]{1,12}\.?\s*\d+:\d+(?:[,;]\s*\d+:\d+)*\]/g;
@@ -710,7 +831,11 @@ function extractRefsFromEntry(key,useA,useB,filterFields){
     for(const f of entry.fields){
       if(filterFields&&!filterFields.some(ff=>f.name.toLowerCase().includes(ff)))continue;
       const matches=f.value.match(BIBLE_REF_RE);
-      if(matches)matches.forEach(m=>refs.add(m));
+      if(matches)matches.forEach(m=>{
+        // Normalizuj: odstraň extra mezery uvnitř závorek, sjednoť mezery za čárkou
+        const norm=m.replace(/\[\s*/,'[').replace(/\s*\]/,']').replace(/\s*,\s*/g,', ').replace(/\s*;\s*/g,'; ');
+        refs.add(norm);
+      });
     }
   }
   return [...refs];
