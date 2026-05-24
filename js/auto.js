@@ -85,6 +85,7 @@ export function createAutoApi(deps) {
      if (btnAutoSeq) { btnAutoSeq.textContent = '↻ Postupně'; btnAutoSeq.classList.remove('active'); }
      updateAutoProviderCountdowns();
      stopElapsedTimer();
+     state.startTime = null;
    }
 
   const PROVIDER_LABELS = { groq: 'Groq', gemini: 'Gemini', openrouter: 'OpenRouter' };
@@ -266,6 +267,11 @@ export function createAutoApi(deps) {
 
         while (state.autoRunning) {
           if (isAutoTokenLimitReached()) break;
+          if (!isAutoProviderEnabled(prov)) {
+            log('[' + (PROVIDER_LABELS[prov]||prov) + '] provider vypnut — zastavuji worker');
+            setAutoProviderCountdownLabel(prov, t('provider.status.disabled', { label: PROVIDER_LABELS[prov]||prov }));
+            break;
+          }
 
           // Zkontrolovat request a token limit pro providera
           if (typeof window !== 'undefined') {
@@ -298,7 +304,27 @@ export function createAutoApi(deps) {
             if (autoBatch) autoBatch.textContent = batch[0] + '–' + batch[batch.length - 1];
           }
 
-          const result = await translateBatchForProvider(batch, prov, apiKey, model);
+          let result;
+          try {
+            result = await translateBatchForProvider(batch, prov, apiKey, model);
+          } catch (err) {
+            log('[' + (PROVIDER_LABELS[prov]||prov) + '] výjimka při překladu: ' + (err?.message || err));
+            for (const key of batch) {
+              if (state.translated[key]?._processing && !state.translated[key].vyznam) {
+                delete state.translated[key];
+              }
+            }
+            break;
+          }
+
+          // Vrátit _processing zpět pokud překlad selhal (konzistence se sekvenčním módem)
+          if (!result || !result.ok) {
+            for (const key of batch) {
+              if (state.translated[key]?._processing && !state.translated[key].vyznam) {
+                delete state.translated[key];
+              }
+            }
+          }
 
           updateStats();
           renderList();
@@ -592,6 +618,7 @@ export function createAutoApi(deps) {
     const countdown = document.getElementById('countdown');
     if (countdown) countdown.textContent = '—';
     stopElapsedTimer();
+    state.startTime = null;
     updateAutoProviderCountdowns();
   }
 
