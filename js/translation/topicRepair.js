@@ -116,7 +116,11 @@ function updateTopicRepairProviderStatus() {
     } else if (topicRepairState.currentTask && topicRepairState.currentTask.provider === prov) {
       line.textContent = t('provider.status.running', { label });
     } else {
-      const left = getProviderCooldownLeftSec(prov);
+      const seqCd = state.topicRepairSeqCdUntil;
+      const seqLeft = (seqCd && seqCd.prov === prov) ? Math.max(0, Math.ceil((seqCd.until - Date.now()) / 1000)) : 0;
+      const bulkUntil = state.topicRepairBulkCdUntil?.[prov] || 0;
+      const bulkLeft = bulkUntil > Date.now() ? Math.max(0, Math.ceil((bulkUntil - Date.now()) / 1000)) : 0;
+      const left = seqLeft || bulkLeft || getProviderCooldownLeftSec(prov);
       line.textContent = left > 0
         ? t('provider.status.nextIn', { label, seconds: left })
         : t('provider.status.ready', { label });
@@ -753,24 +757,16 @@ nextTask.detectedTopics = [];
        }
        updateTopicRepairModalUI();
        await saveProgress();
-       // Interval s živým odpočítáváním — nastavit cooldown a zároveň přímo psát do UI každých 500ms
-       const seqInterval = Math.max(5, Number(state.currentInterval) || parseInt(document.getElementById('intervalRun')?.value, 10) || parseInt(document.getElementById('interval')?.value, 10) || 20);
-       const _waitUntil = Date.now() + seqInterval * 1000;
+       // Interval s odpočítáváním — čteme z topic repair vlastního vstupu pro daného providera
        const _cdProv = nextTask.provider || enabledProviders[enabledProviders.length - 1] || '';
-       const _cdLabel = _cdProv === 'groq' ? 'Groq' : (_cdProv === 'gemini' ? 'Google' : 'OpenRouter');
-       // Nastavit providerCooldownUntil aby getProviderCooldownLeftSec vrátilo správnou hodnotu
-       if (_cdProv && state.providerCooldownUntil) state.providerCooldownUntil[_cdProv] = _waitUntil;
+       const seqInterval = Math.max(1, parseInt(document.getElementById(`tr_interval_${_cdProv}`)?.value, 10) || 20);
+       const _waitUntil = Date.now() + seqInterval * 1000;
+       // Dedikovaná proměnná — nezávislá na hlavním překladači, ticker ji čte přímo
+       state.topicRepairSeqCdUntil = { prov: _cdProv, until: _waitUntil };
        while (!state.topicRepairState?.closed && !state.paused && Date.now() < _waitUntil) {
-         const remSec = Math.ceil((_waitUntil - Date.now()) / 1000);
-         // Přímý zápis do UI — překryje ticker aby se zobrazovalo každých 500ms
-         if (_cdProv) {
-           const _line = document.getElementById(`topicRepairProvider_${_cdProv}`);
-           if (_line) _line.textContent = `${_cdLabel}: ${remSec}s`;
-         }
          await sleepMs(Math.min(500, Math.max(50, _waitUntil - Date.now())));
        }
-       // Reset cooldown po skončení čekání
-       if (_cdProv && state.providerCooldownUntil) state.providerCooldownUntil[_cdProv] = 0;
+       state.topicRepairSeqCdUntil = null;
     }
     updateTopicRepairModalUI();
     if (state.topicRepairState && !state.topicRepairState.closed) {
@@ -1558,10 +1554,13 @@ async function runTopicRepairBulkTranslationCore(state, topicId, systemPrompt, u
 
         // Vlastní interval — každý provider čeká nezávisle
         const waitUntil = Date.now() + effectiveIv * 1000;
+        if (!state.topicRepairBulkCdUntil) state.topicRepairBulkCdUntil = {};
+        state.topicRepairBulkCdUntil[prov] = waitUntil;
         while (Date.now() < waitUntil) {
           if (abortVersion !== Number(state.topicRepairBulkAbortVersion || 0)) break;
           await sleepMs(Math.min(500, waitUntil - Date.now()));
         }
+        state.topicRepairBulkCdUntil[prov] = 0;
 
       } catch (e) {
         logError('bulkProviderWorker', e, { prov, batchKeys, topicId });
@@ -1583,10 +1582,13 @@ async function runTopicRepairBulkTranslationCore(state, topicId, systemPrompt, u
 
         if (isRate) log('[' + prov + '] rate limit, cekam ' + cooldown + 's');
         const waitUntil = Date.now() + cooldown * 1000;
+        if (!state.topicRepairBulkCdUntil) state.topicRepairBulkCdUntil = {};
+        state.topicRepairBulkCdUntil[prov] = waitUntil;
         while (Date.now() < waitUntil) {
           if (abortVersion !== Number(state.topicRepairBulkAbortVersion || 0)) break;
           await sleepMs(Math.min(500, waitUntil - Date.now()));
         }
+        state.topicRepairBulkCdUntil[prov] = 0;
       }
     }
   }
@@ -1623,6 +1625,7 @@ async function runTopicRepairBulkTranslation() {
 
   state.topicRepairBulkRunning = true;
   state.topicRepairBulkAbortVersion++;
+  state.topicRepairBulkCdUntil = {};
   const bulkBtn = document.getElementById('topicRepairBulkRunBtn');
   if (bulkBtn) {
     bulkBtn.disabled = false;
@@ -1724,6 +1727,7 @@ async function runTopicRepairBulkTranslation() {
   } finally {
     state.paused = wasPaused;
     state.topicRepairBulkRunning = false;
+    state.topicRepairBulkCdUntil = null;
     if (bulkBtn) {
       bulkBtn.disabled = false;
       bulkBtn.textContent = t('topicRepair.bulk.button');
