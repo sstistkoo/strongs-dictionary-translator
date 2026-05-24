@@ -190,14 +190,14 @@ async function fetchOpenRouterCredits(apiKey) {
 }
 
 async function fetchGroqLimits(apiKey, model) {
+  let headers = {};
   // Try models list endpoint first - it should have headers
   try {
     const modelsRes = await fetch('https://api.groq.com/openai/v1/models', {
       headers: { 'Authorization': 'Bearer ' + apiKey }
     });
-    
-    let respHeaders = {};
-      const allHeaders = [];
+
+    const allHeaders = [];
     modelsRes.headers.forEach((value, name) => {
       allHeaders.push([name, value]);
       if (name.startsWith('x-ratelimit-')) {
@@ -226,15 +226,14 @@ async function fetchGroqLimits(apiKey, model) {
   });
   
   // Even error responses contain rate limit headers
-  let respHeaders = {};
-      const allHeaders = [];
+  const allHeaders = [];
   res.headers.forEach((value, name) => {
     allHeaders.push([name, value]);
     if (name.startsWith('x-ratelimit-')) {
       headers[name] = value;
     }
   });
-  respresprespHeaders._all = allHeaders;
+  headers._all = allHeaders;
   
   // Also get any error message
   let errorMsg = '';
@@ -305,7 +304,7 @@ function renderGroqLimits(result) {
   }
   
   // Debug: show all headers if nothing parsed
-  const debugHeaders = respresprespHeaders._all || rateLimitHeaders;
+  const debugHeaders = headers._all || rateLimitHeaders;
   if ( rows.length === 0 && debugHeaders.length > 0) {
     rows.push(`<div style="color:var(--ylw);font-size:10px;margin-bottom:8px">${t('limits.debug.headers')}</div>`);
     debugHeaders.slice(0, 20).forEach(([k, v]) => {

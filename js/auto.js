@@ -566,7 +566,7 @@ export function createAutoApi(deps) {
     state.seqProviderIndex = 0;
     state.seqProviderNextAllowed = {};
     const btn = document.getElementById('btnAutoSeq');
-    if (btn) btn.textContent = '■ Stop';
+    if (btn) { btn.textContent = '■ Stop'; btn.classList.add('active'); }
     document.getElementById('autoPanel')?.classList.add('show');
     if (!state.startTime) {
       state.startTime = Date.now();
@@ -584,7 +584,7 @@ export function createAutoApi(deps) {
     clearTimeout(state.autoTimer);
     clearInterval(state.autoCountTimer);
     const btn = document.getElementById('btnAutoSeq');
-    if (btn) btn.textContent = '↻ Postupně';
+    if (btn) { btn.textContent = '↻ Postupně'; btn.classList.remove('active'); }
     if (window.innerWidth <= 600) {
       document.getElementById('autoPanel')?.classList.remove('show');
     }
