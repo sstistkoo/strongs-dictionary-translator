@@ -2889,7 +2889,9 @@ function scanEnglishRefsInTranslated() {
       .map(m => m[0])
       .filter(ref => convertBiblicalAbbreviations(ref, targetLang) !== ref);
     if (enRefs.length === 0) continue;
-    results.push({ key, def, converted, enRefs, targetLang });
+    const e = state.entryMap?.get(key) || {};
+    const srcDef = String(e.definice || e.def || '');
+    results.push({ key, def, converted, enRefs, srcDef, targetLang });
   }
   results.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
   return results;
@@ -2903,12 +2905,19 @@ function renderEnglishRefsModal() {
     modal.style.cssText = 'position:fixed;inset:0;z-index:10030;background:rgba(0,0,0,0.65);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
     document.body.appendChild(modal);
   }
+  const trunc = (s, n) => s.length > n ? s.slice(0, n) + '…' : s;
   const results = _enRefsModalResults;
   const rows = results.map((r, idx) => `
-    <div id="enRefsRow_${idx}" style="display:flex;align-items:flex-start;gap:10px;padding:7px 4px;border-bottom:1px solid var(--brd)">
-      <span style="color:var(--acc);min-width:58px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:bold;flex-shrink:0">${escHtml(r.key)}</span>
-      <span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:10px;color:#e07b39;word-break:break-all">${r.enRefs.map(escHtml).join(' ')}</span>
-      <button class="hbtn" style="font-size:10px;padding:3px 8px;flex-shrink:0" onclick="applyEnglishRefsFix(${idx})">Opravit</button>
+    <div id="enRefsRow_${idx}" style="padding:8px 4px;border-bottom:1px solid var(--brd)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+        <span style="color:var(--acc);min-width:58px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:bold;flex-shrink:0">${escHtml(r.key)}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#e07b39;flex:1;word-break:break-all">${r.enRefs.map(escHtml).join(' ')}</span>
+        <button class="hbtn" style="font-size:10px;padding:3px 8px;flex-shrink:0" onclick="applyEnglishRefsFix(${idx})">Opravit</button>
+      </div>
+      <div style="font-size:10px;line-height:1.5;color:var(--txt2);padding-left:68px">
+        <div><span style="color:var(--txt3);user-select:none">EN: </span>${escHtml(trunc(r.srcDef, 220))}</div>
+        <div><span style="color:var(--txt3);user-select:none">CZ: </span>${escHtml(trunc(r.def, 220))}</div>
+      </div>
     </div>
   `).join('');
   modal.innerHTML = `
