@@ -1929,6 +1929,8 @@ const {
   openEnglishRefsModal,
   applyEnglishRefsFix,
   applyAllEnglishRefsFixes,
+  toggleEnRefsValidateLang,
+  downloadEnglishRefsReport,
 } = topicRepairApi;
 
 // -- LIMITS + PREVIEW API ----------------------------------------
@@ -4783,6 +4785,8 @@ window.fixBiblicalRefsForTask = fixBiblicalRefsForTask;
 window.openEnglishRefsModal = openEnglishRefsModal;
 window.applyEnglishRefsFix = applyEnglishRefsFix;
 window.applyAllEnglishRefsFixes = applyAllEnglishRefsFixes;
+window.toggleEnRefsValidateLang = toggleEnRefsValidateLang;
+window.downloadEnglishRefsReport = downloadEnglishRefsReport;
 window.applySystemPromptForCurrentTask = applySystemPromptForCurrentTask;
 window.syncTopicPromptTemplatesReport = syncTopicPromptTemplatesReport;
 window.buildTopicPrompt = buildTopicPrompt;

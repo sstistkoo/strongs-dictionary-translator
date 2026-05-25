@@ -2875,10 +2875,74 @@ function buildTopicDataBlockForDetail(key, topicId) {
 
 // ── English refs scanner modal ──────────────────────────────────────────────
 let _enRefsModalResults = [];
+let _enRefsValidateLang = false;
+
+// Regex pro znaky specifické pro cílový jazyk — slouží k ověření že překlad je v správném jazyce
+const LANG_CHAR_RE = {
+  cs: /[áčďéěíňóřšťúůýž]/i,
+  sk: /[áčďéíĺľňóôŕšťúýž]/i,
+  pl: /[ąćęłńóśźż]/i,
+  de: /[äöüß]/i,
+  fr: /[àâæçéèêëîïôœùûüÿ]/i,
+  es: /[áéíóúüñ]/i,
+  it: /[àèéìíîóòùú]/i,
+  pt: /[àáâãçéêíóôõú]/i,
+  ru: /[А-я]/,
+  uk: /[Ѐ-ӿ]/,
+  bg: /[Ѐ-ӿ]/,
+  ro: /[ăâîșțşţ]/i,
+  da: /[æøå]/i,
+  fi: /[äö]/i,
+  hu: /[áéíóöőúüű]/i,
+  nl: /[àáèéêëïîùúûü]/i,
+  no: /[æøå]/i,
+  sv: /[åäö]/i,
+  ar: /[؀-ۿ]/,
+  el: /[Ͱ-Ͽ]/,
+  tr: /[çğışöü]/i,
+  'zh-CN': /[一-鿿]/,
+  ja: /[぀-ヿ]/,
+  ko: /[가-힯]/,
+  he: /[֐-׿]/,
+};
+
+function isDefInTargetLang(text, lang) {
+  const l = String(lang || 'cs').toLowerCase().replace('_', '-');
+  const key = l === 'cz' ? 'cs' : l;
+  const re = LANG_CHAR_RE[key];
+  if (!re) return true;
+  return re.test(text);
+}
+
+function toggleEnRefsValidateLang(checked) {
+  _enRefsValidateLang = checked;
+  renderEnglishRefsModal();
+}
+
+function downloadEnglishRefsReport() {
+  const targetLang = String(localStorage.getItem('strong_target_lang') || 'cs').toLowerCase();
+  const data = _enRefsModalResults.map(r => ({
+    key: r.key,
+    langOk: isDefInTargetLang(r.def, targetLang),
+    enRefs: r.enRefs,
+    srcDef: r.srcDef,
+    czDef: r.def,
+    converted: r.converted,
+  }));
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `english-refs-report-${targetLang}-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function scanEnglishRefsInTranslated() {
   const targetLang = String(localStorage.getItem('strong_target_lang') || 'cs').toLowerCase();
   const EN_REF_RE = /\[[1-4]?[A-Za-z]+\.[^\[\]]+\]/g;
+  const stripKjv = s => s.replace(/\s*\|\s*KJV:[^|]*/gi, '').trim();
   const results = [];
   for (const [key, entry] of Object.entries(state.translated || {})) {
     const def = String(entry.definice || '');
@@ -2891,6 +2955,9 @@ function scanEnglishRefsInTranslated() {
     if (enRefs.length === 0) continue;
     const e = state.entryMap?.get(key) || {};
     const srcDef = String(e.definice || e.def || '');
+    const srcCore = stripKjv(srcDef);
+    // Přeskočit hesla kde je CZ překlad výrazně kratší než EN zdroj (nekompletní překlad)
+    if (srcCore.length > 80 && def.length < srcCore.length * 0.35) continue;
     results.push({ key, def, converted, enRefs, srcDef, targetLang });
   }
   results.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
@@ -2905,27 +2972,45 @@ function renderEnglishRefsModal() {
     modal.style.cssText = 'position:fixed;inset:0;z-index:10030;background:rgba(0,0,0,0.65);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
     document.body.appendChild(modal);
   }
-  const trunc = (s, n) => s.length > n ? s.slice(0, n) + '…' : s;
   const results = _enRefsModalResults;
-  const rows = results.map((r, idx) => `
-    <div id="enRefsRow_${idx}" style="padding:8px 4px;border-bottom:1px solid var(--brd)">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+  const targetLang = String(localStorage.getItem('strong_target_lang') || 'cs').toLowerCase().replace('_', '-');
+  const validCount = _enRefsValidateLang
+    ? results.filter(r => isDefInTargetLang(r.def, targetLang)).length
+    : results.length;
+  const rows = results.map((r, idx) => {
+    const langOk = !_enRefsValidateLang || isDefInTargetLang(r.def, targetLang);
+    const rowStyle = langOk
+      ? 'padding:8px 4px;border-bottom:1px solid var(--brd)'
+      : 'padding:8px 4px;border-bottom:1px solid var(--brd);opacity:0.45';
+    const badge = !langOk
+      ? `<span style="font-size:9px;color:#e07b39;background:rgba(224,123,57,0.15);border:1px solid rgba(224,123,57,0.4);border-radius:3px;padding:1px 4px;flex-shrink:0">⚠ jazyk</span>`
+      : '';
+    return `
+    <div id="enRefsRow_${idx}" style="${rowStyle}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
         <span style="color:var(--acc);min-width:58px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:bold;flex-shrink:0">${escHtml(r.key)}</span>
+        ${badge}
         <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#e07b39;flex:1;word-break:break-all">${r.enRefs.map(escHtml).join(' ')}</span>
-        <button class="hbtn" style="font-size:10px;padding:3px 8px;flex-shrink:0" onclick="applyEnglishRefsFix(${idx})">Opravit</button>
+        <button class="hbtn" style="font-size:10px;padding:3px 8px;flex-shrink:0" ${langOk ? '' : 'disabled'} onclick="applyEnglishRefsFix(${idx})">Opravit</button>
       </div>
       <div style="font-size:10px;line-height:1.5;color:var(--txt2);padding-left:68px">
-        <div><span style="color:var(--txt3);user-select:none">EN: </span>${escHtml(trunc(r.srcDef, 220))}</div>
-        <div><span style="color:var(--txt3);user-select:none">CZ: </span>${escHtml(trunc(r.def, 220))}</div>
+        <div><span style="color:var(--txt3);user-select:none">EN: </span>${escHtml(r.srcDef)}</div>
+        <div style="margin-top:2px"><span style="color:var(--txt3);user-select:none">CZ: </span>${escHtml(r.def)}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
+  const langLabel = targetLang === 'cz' ? 'cs' : targetLang;
   modal.innerHTML = `
-    <div style="max-width:860px;width:100%;background:var(--bg2);border:1px solid var(--brd);border-radius:8px;padding:16px">
+    <div style="max-width:900px;width:100%;background:var(--bg2);border:1px solid var(--brd);border-radius:8px;padding:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
         <h2 style="color:var(--acc);margin:0;font-size:15px">🔗 Anglické refs v překladech (${results.length})</h2>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${results.length > 0 ? `<button class="hbtn grn" onclick="applyAllEnglishRefsFixes()">✓ Opravit vše (${results.length})</button>` : ''}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${results.length > 0 ? `<button class="hbtn grn" onclick="applyAllEnglishRefsFixes()">✓ Opravit vše (${validCount})</button>` : ''}
+          ${results.length > 0 ? `<button class="hbtn" onclick="downloadEnglishRefsReport()" title="Stáhnout report jako JSON pro kontrolu">⬇ Export</button>` : ''}
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--txt2);white-space:nowrap">
+            <input type="checkbox" ${_enRefsValidateLang ? 'checked' : ''} onchange="toggleEnRefsValidateLang(this.checked)" style="accent-color:var(--acc)">
+            🔍 Ověřit jazyk (${langLabel})
+          </label>
           <button class="hbtn" onclick="document.getElementById('englishRefsModal')?.remove()">✕ Zavřít</button>
         </div>
       </div>
@@ -2960,10 +3045,16 @@ function applyEnglishRefsFix(idx) {
 }
 
 function applyAllEnglishRefsFixes() {
+  const targetLang = String(localStorage.getItem('strong_target_lang') || 'cs').toLowerCase();
   let applied = 0;
+  const kept = [];
   const activeNeedsRefresh = _enRefsModalResults.some(r => r.key === state.activeKey);
   for (const r of _enRefsModalResults) {
     if (!state.translated[r.key]) continue;
+    if (_enRefsValidateLang && !isDefInTargetLang(r.def, targetLang)) {
+      kept.push(r);
+      continue;
+    }
     state.translated[r.key].definice = r.converted;
     applied++;
   }
@@ -2972,9 +3063,10 @@ function applyAllEnglishRefsFixes() {
     if (activeNeedsRefresh && typeof renderDetail === 'function') renderDetail();
     if (typeof updateStats === 'function') updateStats();
   }
-  _enRefsModalResults = [];
+  _enRefsModalResults = kept;
   renderEnglishRefsModal();
-  showToast(`🔗 Opraveno ${applied} hesel`);
+  const skipped = kept.length;
+  showToast(`🔗 Opraveno ${applied} hesel${skipped > 0 ? `, přeskočeno ${skipped} (⚠ jazyk)` : ''}`);
 }
 
 return {
@@ -3030,5 +3122,7 @@ syncTopicPromptTemplatesReport,
      openEnglishRefsModal,
      applyEnglishRefsFix,
      applyAllEnglishRefsFixes,
+     toggleEnRefsValidateLang,
+     downloadEnglishRefsReport,
    };
 }
