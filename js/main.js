@@ -1931,6 +1931,9 @@ const {
   applyAllEnglishRefsFixes,
   toggleEnRefsValidateLang,
   downloadEnglishRefsReport,
+  downloadTopicRepairTxt,
+  debugTopicEntry,
+  checkDefinitionQuality,
 } = topicRepairApi;
 
 // -- LIMITS + PREVIEW API ----------------------------------------
@@ -4787,6 +4790,9 @@ window.applyEnglishRefsFix = applyEnglishRefsFix;
 window.applyAllEnglishRefsFixes = applyAllEnglishRefsFixes;
 window.toggleEnRefsValidateLang = toggleEnRefsValidateLang;
 window.downloadEnglishRefsReport = downloadEnglishRefsReport;
+window.downloadTopicRepairTxt = downloadTopicRepairTxt;
+window.debugTopicEntry = debugTopicEntry;
+window.checkDefinitionQuality = checkDefinitionQuality;
 window.applySystemPromptForCurrentTask = applySystemPromptForCurrentTask;
 window.syncTopicPromptTemplatesReport = syncTopicPromptTemplatesReport;
 window.buildTopicPrompt = buildTopicPrompt;

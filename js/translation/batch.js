@@ -106,31 +106,36 @@ function normalizeAiTopicRawText(s) {
     .replace(/\uFF1F/g, '?')
     .normalize('NFKC');
 }
-function parseTopicRepairBatchResponse(rawText, topicId) {
+function parseTopicRepairBatchResponse(rawText, topicId, keys) {
   const text = normalizeAiTopicRawText(rawText).trim();
   if (!text) return {};
-  const blocks = text.split(/\n(?=#{1,6}\s*[gGhH]?\d+)/i);
+  // Sestavíme numToKey ze poslaných klíčů — stačí číslo bez prefixu (jako hlavní parser)
+  const numToKey = {};
+  if (Array.isArray(keys)) {
+    for (const k of keys) numToKey[String(k).replace(/^[GHgh]/, '')] = String(k).toUpperCase();
+  }
+  const hasNumMap = Object.keys(numToKey).length > 0;
+  const blocks = text.split(/\n(?=#{1,6}\s*[\[({]?[gGhH]?\d+)/i);
   const out = {};
-  const headerRe = /^#{2,6}\s*([gGhH]?)(\d+)\s*(?:#+\s*)?(?=\n|$|\r)/im;
+  // Záhlaví: 1–6 #, volitelné závorky, G/H prefix, číslo, volitelně | slovo (tvaroslovi), volitelné uzavírací #
+  const headerRe = /^#{1,6}\s*[\[({]?([gGhH]?)(\d+)[\])}]?(?:\s*\|[^\n]*)?\s*#{0,6}\s*(?=\n|$|\r)/im;
   for (const block of blocks) {
     const b = String(block || '').trim();
     if (!b) continue;
     const header = b.match(headerRe);
     if (!header) continue;
-    const letter = (header[1] || '').toUpperCase();
     const num = header[2];
-    // Ukládáme pod oběma variantami aby lookup vždy trefil správný klíč
-    const key = (letter || 'G') + num;
+    // numToKey lookup — stačí číslo; fallback na letter+num pokud keys nebyly předány
+    const key = hasNumMap
+      ? (numToKey[num] || null)
+      : ((header[1] || 'G').toUpperCase() + num);
+    if (!key) continue;
     const rest = b.slice(header.index + header[0].length).trim();
     let val = String(extractTopicValueFromAI(rest, topicId, 'strict') || '').trim();
     if (!hasMeaningfulValue(val)) {
       val = String(extractTopicValueFromAI(rest, topicId, 'loose') || '').trim();
     }
-    if (hasMeaningfulValue(val)) {
-      out[key] = val;
-      // Pokud AI vynechala písmeno, uložíme pod oběma variantami aby lookup vždy uspěl
-      if (!letter) { out['G' + num] = val; out['H' + num] = val; }
-    }
+    if (hasMeaningfulValue(val)) out[key] = val;
   }
   return out;
 }
@@ -1084,7 +1089,7 @@ async function translateTopicBatchWithGemini(keys, topicId) {
     const rawText = raw.content;
 
     // Parse odpov?di
-    const parsedMap = parseTopicRepairBatchResponse(rawText, topicId);
+    const parsedMap = parseTopicRepairBatchResponse(rawText, topicId, keys);
 
     for (const key of keys) {
       const _num = key.replace(/^[GH]/, '');

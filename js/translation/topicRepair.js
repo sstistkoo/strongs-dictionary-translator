@@ -149,7 +149,16 @@ function updateTopicRepairProviderStatus() {
   }
 }
 
+let _topicRepairUIRafPending = false;
 function updateTopicRepairModalUI() {
+  if (_topicRepairUIRafPending) return;
+  _topicRepairUIRafPending = true;
+  (typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame : setTimeout)(() => {
+    _topicRepairUIRafPending = false;
+    _updateTopicRepairModalUISync();
+  }, 0);
+}
+function _updateTopicRepairModalUISync() {
   const topicRepairState = state.topicRepairState;
   if (!topicRepairState) return;
   const vis = getTopicRepairModalVisibleTasks(state);
@@ -385,6 +394,94 @@ function fixBiblicalRefsForTask(idx) {
 }
 
 
+/**
+ * Kontrola kvality CZ definice na třech kritériích:
+ *   1. diakritika  — CZ text má znaky cílového jazyka (není nepřeložený)
+ *   2. velikost    — CZ není příliš krátký oproti EN zdroji
+ *   3. biblické refs — CZ má aspoň tolik refs jako EN (bez KJV)
+ *
+ * Vrací { ok: bool, issues: string[] }
+ * ok = true → překlad vypadá dobře, nevkládat do fronty oprav
+ */
+function checkDefinitionQuality(czDef, srcDefNoKjv) {
+  const issues = [];
+  const s = String(czDef || '').trim();
+  const src = String(srcDefNoKjv || '').trim();
+
+  // 1. Diakritika — detekce nepřeloženého textu
+  const targetLang = String(localStorage.getItem('strong_target_lang') || 'cs').toLowerCase();
+  const diacriticRe = {
+    cz: /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/,
+    cs: /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/,
+    sk: /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/,
+    pl: /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/,
+    ru: /[Ѐ-ӿ]/,
+    bg: /[Ѐ-ӿ]/,
+  }[targetLang] || /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/;
+
+  const czWords = s.split(/\s+/).filter(Boolean);
+  if (czWords.length >= 8) {
+    const withDiacritics = czWords.filter(w => diacriticRe.test(w)).length;
+    const ratio = withDiacritics / czWords.length;
+    if (ratio < 0.05) {
+      issues.push(`nediakritický text (${withDiacritics}/${czWords.length} slov = ${Math.round(ratio * 100)} %)`);
+    }
+  }
+
+  // 2. Velikost — CZ příliš krátký oproti EN zdroji
+  if (src.length > 200 && s.length < src.length * 0.35) {
+    issues.push(`příliš krátký (CZ: ${s.length} zn., EN: ${src.length} zn., limit: ${Math.round(src.length * 0.35)} zn.)`);
+  }
+
+  // 3. Biblické reference — CZ má méně refs než EN zdroj
+  const srcRefs = countDefRefs(src);
+  const czRefs  = countDefRefs(s);
+  if (srcRefs > 0 && czRefs < srcRefs) {
+    issues.push(`chybí refs (CZ: ${czRefs}, EN: ${srcRefs})`);
+  }
+
+  return { ok: issues.length === 0, issues };
+}
+
+function debugTopicEntry(key) {
+  key = String(key || '').toUpperCase().trim();
+  const t = state.translated[key] || {};
+  const e = state.entryMap?.get(key) || {};
+  const stripKjv = s => String(s || '').replace(/\s*\|\s*KJV:[^|]*/gi, '').trim();
+  const srcDefRaw = String(e.definice || e.def || '');
+  const srcDefNoKjv = stripKjv(srcDefRaw);
+  const czDef = String(t.definice || '').trim();
+  const srcRefs = countDefRefs(srcDefNoKjv);
+  const czRefs = countDefRefs(czDef);
+
+  const missing = typeof getMissingTopicsForRepair === 'function'
+    ? getMissingTopicsForRepair(t)
+    : [];
+
+  const quality = checkDefinitionQuality(czDef, srcDefNoKjv);
+  const numberedListIssue = /\b1[a-z]?\)/.test(srcDefNoKjv) && !/\b1[a-z]?\)/.test(czDef)
+    ? 'číslovaný seznam v EN ale ne v CZ' : null;
+  const allIssues = [...quality.issues, ...(numberedListIssue ? [numberedListIssue] : [])];
+
+  const result = {
+    key,
+    'translated.definice': czDef || '(prázdné)',
+    'translated.vyznam': String(t.vyznam || ''),
+    'translated.kjv': String(t.kjv || ''),
+    'srcDefNoKjv (zkráceno)': srcDefNoKjv.slice(0, 200) + (srcDefNoKjv.length > 200 ? '…' : ''),
+    srcRefs,
+    czRefs,
+    'checkDefinitionQuality.ok': quality.ok,
+    'problémy s kvalitou': allIssues.length ? allIssues.join(' | ') : '(žádné)',
+    'getMissingTopicsForRepair': missing,
+    'manuallyApproved:definice': state.topicRepairManuallyApproved?.has(`${key}:definice`) ?? false,
+  };
+  console.table(result);
+  console.log('[debugTopicEntry] raw translated:', t);
+  console.log('[debugTopicEntry] raw entryMap:', e);
+  return result;
+}
+
 function buildTopicRepairTasks(keys) {
   const tasks = [];
   for (const key of keys) {
@@ -399,35 +496,31 @@ function buildTopicRepairTasks(keys) {
     const stripKjv = s => String(s || '').replace(/\s*\|\s*KJV:[^|]*/gi, '').trim();
     const srcDefRaw = String(e.definice || e.def || '');
     const srcDefNoKjv = stripKjv(srcDefRaw);
-    // Přidej definice do opravy pokud chybí biblické refs oproti EN originálu (bez KJV)
-    if (!missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
-      const srcRefs = countDefRefs(srcDefNoKjv);
-      const czRefs = countDefRefs(t.definice || '');
-      if (srcRefs > 0 && czRefs < srcRefs) {
+    // --- Kontrola kvality definice (3 kritéria: diakritika, velikost, refs) ---
+    if (hasMeaningfulValue(String(t.definice || ''))) {
+      const czDef = String(t.definice || '').trim();
+      const quality = checkDefinitionQuality(czDef, srcDefNoKjv);
+
+      // Přidej 'definice' do opravy pokud selže kontrola kvality
+      if (!missing.includes('definice') && !quality.ok) {
         missing.push('definice');
       }
-    }
-    // Přidej definice do opravy pokud zdroj má číslovaný seznam (1), 1a)…) ale CZ překlad ne → zkrácený překlad
-    if (!missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
-      const czDef = String(t.definice || '').trim();
-      const srcHasNumberedList = /\b1[a-z]?\)/.test(srcDefNoKjv);
-      const czHasNumberedList = /\b1[a-z]?\)/.test(czDef);
-      if (srcHasNumberedList && !czHasNumberedList) {
-        missing.push('definice');
-      }
-    }
-    // Přidej definice do opravy pokud je CZ překlad příliš krátký oproti rozšířenému EN zdroji (bez KJV)
-    if (!missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
-      const czDef = String(t.definice || '').trim();
-      if (srcDefNoKjv.length > 200 && czDef.length < srcDefNoKjv.length * 0.35) {
-        missing.push('definice');
-      }
-    }
-    // Odstraň 'definice' z opravy pokud je zdroj bez KJV krátký a CZ překlad je proporcionálně adekvátní
-    if (missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
-      const czDef = String(t.definice || '').trim();
-      if (srcDefNoKjv.length > 0 && srcDefNoKjv.length < 60 && czDef.length >= srcDefNoKjv.length * 0.25) {
+
+      // Ochrana před false-positive: pokud překlad prošel všemi 3 kontrolami,
+      // odstraň 'definice' z fronty oprav (i když getMissingTopicsForRepair ho přidal)
+      if (missing.includes('definice') && quality.ok) {
         missing.splice(missing.indexOf('definice'), 1);
+      }
+
+      if (window.DEBUG_TOPIC_REPAIR && !quality.ok) {
+        console.log(`[quality] ${key}:`, quality.issues.join('; '));
+      }
+    }
+    // Číslovaný seznam v EN ale ne v CZ → zkrácený překlad (přidává, ale nechrání)
+    if (!missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
+      const czDef = String(t.definice || '').trim();
+      if (/\b1[a-z]?\)/.test(srcDefNoKjv) && !/\b1[a-z]?\)/.test(czDef)) {
+        missing.push('definice');
       }
     }
     // Debug log
@@ -525,6 +618,7 @@ function renderTopicRepairModal() {
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="hbtn" onclick="window.startTopicRepairFlowFromClipboard&&window.startTopicRepairFlowFromClipboard()" title="Načte Strong čísla ze schránky a přidá je k opravě">📋 Ze schránky</button>
           <button class="hbtn" onclick="openEnglishRefsModal()" title="Zobrazí všechna hesla kde biblické refs zůstaly v angličtině">🔗 refs</button>
+          <button class="hbtn" onclick="downloadTopicRepairTxt()" title="Stáhne TXT se všemi úlohami — EN originál a CZ překlad">⬇ TXT</button>
           <button class="hbtn" id="topicRepairMinimizeBtn" onclick="minimizeTopicRepairModal()">${t('topicRepair.modal.minimize')}</button>
           <button class="hbtn" onclick="closeTopicRepairModalOnly()">${t('topicRepair.modal.closeWindow')}</button>
         </div>
@@ -1323,22 +1417,30 @@ function getTopicBatchAiLabel(topicId) {
   })[topicId] || 'VYZNAM';
 }
 
-function parseTopicRepairBatchResponse(rawText, topicId) {
+function parseTopicRepairBatchResponse(rawText, topicId, keys) {
   const text = normalizeAiTopicRawText(rawText).trim();
   if (!text) return {};
-  // Akceptuj ###G66### i ###66### (písmeno volitelné)
-  const blocks = text.split(/\n(?=#{1,6}\s*[gGhH]?\d+)/i);
+  // Sestavíme numToKey ze poslaných klíčů — stačí číslo bez prefixu (jako hlavní parser)
+  const numToKey = {};
+  if (Array.isArray(keys)) {
+    for (const k of keys) numToKey[String(k).replace(/^[GHgh]/, '')] = String(k).toUpperCase();
+  }
+  const hasNumMap = Object.keys(numToKey).length > 0;
+  const blocks = text.split(/\n(?=#{1,6}\s*[\[({]?[gGhH]?\d+)/i);
   const out = {};
-  const headerRe = /^#{2,6}\s*([gGhH]?)(\d+)\s*(?:#+\s*)?(?=\n|$|\r)/im;
+  // Záhlaví: 1–6 #, volitelné závorky, G/H prefix, číslo, volitelně | slovo (tvaroslovi), volitelné uzavírací #
+  const headerRe = /^#{1,6}\s*[\[({]?([gGhH]?)(\d+)[\])}]?(?:\s*\|[^\n]*)?\s*#{0,6}\s*(?=\n|$|\r)/im;
   for (const block of blocks) {
     const b = String(block || '').trim();
     if (!b) continue;
     const header = b.match(headerRe);
     if (!header) continue;
-    // Pokud písmeno chybí, předpokládáme 'G' (default)
-    const letter = (header[1] || 'G').toUpperCase();
     const num = header[2];
-    const key = letter + num;
+    // numToKey lookup — stačí číslo; fallback na letter+num pokud keys nebyly předány
+    const key = hasNumMap
+      ? (numToKey[num] || null)
+      : ((header[1] || 'G').toUpperCase() + num);
+    if (!key) continue;
     const rest = b.slice(header.index + header[0].length).trim();
     let val = String(extractTopicValueFromAI(rest, topicId, 'strict') || '').trim();
     if (!hasMeaningfulValue(val)) {
@@ -1354,9 +1456,9 @@ function extractTopicRepairBatchBlockForKey(rawText, key) {
   const text = String(normalizeAiTopicRawText(rawText) || '').trim();
   const upperKey = String(key || '').trim().toUpperCase();
   if (!text || !upperKey) return '';
-  // Akceptuj ###G66### i ###66###
-  const blocks = text.split(/\n(?=#{1,6}\s*[gGhH]?\d+)/i);
-  const headerRe = /^#{2,6}\s*([gGhH]?)(\d+)\s*(?:#+\s*)?(?=\n|$|\r)/im;
+  // Akceptuj ###G66### i ###66### i ###[G747]### (závorky volitelné)
+  const blocks = text.split(/\n(?=#{1,6}\s*[\[({]?[gGhH]?\d+)/i);
+  const headerRe = /^#{1,6}\s*[\[({]?([gGhH]?)(\d+)[\])}]?\s*(?:#+\s*)?(?=\n|$|\r)/im;
   for (const block of blocks) {
     const b = String(block || '').trim();
     if (!b) continue;
@@ -1572,8 +1674,8 @@ async function runTopicRepairBulkTranslationCore(state, topicId, systemPrompt, u
         task.status = 'done';
         task.error = '';
         task.checked = shouldAutoCheckTopicRepairTask(topicId, task.currentValue, val);
-        const blockRaw = extractTopicRepairBatchBlockForKey(rawText, key) || rawText;
         if (task.topicId === 'specialista') {
+          const blockRaw = extractTopicRepairBatchBlockForKey(rawText, key) || rawText;
           syncTopicRepairTaskSpecialistaFromRaw(task, blockRaw);
         }
       } else {
@@ -1649,7 +1751,7 @@ async function runTopicRepairBulkTranslationCore(state, topicId, systemPrompt, u
         if (abortVersion !== Number(state.topicRepairBulkAbortVersion || 0)) break;
 
         const rawText = String(raw?.content || '').trim();
-        const parsedMap = parseTopicRepairBatchResponse(rawText, topicId);
+        const parsedMap = parseTopicRepairBatchResponse(rawText, topicId, batchKeys);
         applyBulkBatchResult(prov, batchKeys, parsedMap, rawText, null);
 
         // Denní token tracking
@@ -2626,7 +2728,7 @@ function normalizeAiTopicRawText(s) {
 function stripLeadingGHeaders(text) {
   let t = String(text || '');
   for (let i = 0; i < 8; i++) {
-    const next = t.replace(/^\s*#{2,6}\s*[gGhH]?\d+\s*(?:#+\s*)?/i, '').trimStart();
+    const next = t.replace(/^\s*#{1,6}\s*[\[({]?[gGhH]?\d+[\])}]?\s*(?:#+\s*)?/i, '').trimStart();
     if (next === t) break;
     t = next;
   }
@@ -2701,18 +2803,27 @@ function normalizeTopicFieldLabel(raw) {
 /** Alternace názvů polí v AI odpovědi (jednotný zdroj pro anchor / řádkové parsování). */
 const TOPIC_FIELD_LABEL_ALTS_FOR_RE = 'VYZNAM|DEFINICE|PUVOD|POUVOD|POVOD|KJV|SPECIALISTA|VYKLAD|VÝKLAD|KOMENTAR|KOMENTÁŘ|EXEGEZE|DEFINITION|MEANING|ORIGIN|COMMENTARY|EXEGESIS|DEF|V|D|P|K|S';
 
-/** Po klíčovém slově často následuje „(specialista)“ / poznámka v závorce — bez toho selhával \s*[-:]. */
+/** Po klíčovém slově často následuje „(specialista)” / poznámka v závorce — bez toho selhával \s*[-:]. */
+let _cachedHeaderScanRegex = null;
 function makeTopicFieldHeaderScanRegex() {
-  // Match label followed by colon, space, dash, or end
-  return new RegExp(`(${TOPIC_FIELD_LABEL_ALTS_FOR_RE})(?:\\*\\*|__)?\\s*[:–—=.]`, 'giu');
+  if (!_cachedHeaderScanRegex) {
+    _cachedHeaderScanRegex = new RegExp(`(${TOPIC_FIELD_LABEL_ALTS_FOR_RE})(?:\\*\\*|__)?\\s*[:–—=.]`, 'giu');
+  }
+  // giu regex má stateful lastIndex — vracíme čerstvou kopii aby forEach/exec fungovaly správně
+  _cachedHeaderScanRegex.lastIndex = 0;
+  return new RegExp(_cachedHeaderScanRegex.source, _cachedHeaderScanRegex.flags);
 }
 
 /** Stejná pravidla jako u anchor regexu, navíc prefix markdownu / číslování na začátku řádku. */
+let _cachedLineStartRegex = null;
 function makeTopicFieldLineStartRegex() {
-  return new RegExp(
-    `^(?:\\s*)(?:(?:\\d+)[.)]\\s+)?(?:(?:[-*+>]|#{1,6})\\s+)?(?:(?:\\*\\*|__)\\s*)?(${TOPIC_FIELD_LABEL_ALTS_FOR_RE})(?:\\*\\*|__)?\\s*(?:\\([^)\\n]{0,240}\\))?\\s*[:–—=.|]+`,
-    'iu'
-  );
+  if (!_cachedLineStartRegex) {
+    _cachedLineStartRegex = new RegExp(
+      `^(?:\\s*)(?:(?:\\d+)[.)]\\s+)?(?:(?:[-*+>]|#{1,6})\\s+)?(?:(?:\\*\\*|__)\\s*)?(${TOPIC_FIELD_LABEL_ALTS_FOR_RE})(?:\\*\\*|__)?\\s*(?:\\([^)\\n]{0,240}\\))?\\s*[:–—=.|]+`,
+      'iu'
+    );
+  }
+  return _cachedLineStartRegex;
 }
 
 /** Hlavička sekce specialisty (aliasy + závorka + dvojtečka nebo nový řádek těla). */
@@ -2780,6 +2891,14 @@ function extractTopicValueFromAI(rawText, topicId, mode = 'loose') {
   const text = normalizeAiTopicRawText(rawText).trim();
   if (!text) return '';
 
+  // AI někdy vrátí dekorovanou Strong referenci místo čistého čísla:
+  // ###G1438 | ἑαυτοῦ (G:F-3)### — vezmeme jen Strong číslo/čísla
+  const decoratedStrongsMatch = text.match(/^#{1,6}\s*((?:[GgHh]\d+[,;\s]*)+)(?:\s*\|[^\n]*)?\s*#{0,6}$/);
+  if (decoratedStrongsMatch) {
+    const nums = [...decoratedStrongsMatch[1].matchAll(/[GgHh]\d+/gi)].map(m => m[0].toUpperCase());
+    if (nums.length) return nums.join(', ');
+  }
+
   const keyForTopic = {
     vyznam: 'VYZNAM',
     definice: 'DEFINICE',
@@ -2831,8 +2950,14 @@ function extractTopicValueFromAI(rawText, topicId, mode = 'loose') {
      // Fallback: nothing
    }
    if (fieldPositions.length > 0 && keyForTopic && !fieldPositions.some(f => f.label === keyForTopic)) {
-     // Bez explicitního labelu nevíme, kde začíná - vrátíme celý očištěný text
-     return cleaned.trim();
+     // AI použila labely pro jiná pole, ale ne pro cílové — text před prvním labelem,
+     // pokud existuje a je smysluplný (jinak '' — nechceme vrátit cizí pole jako hodnotu)
+     if (mode !== 'strict') {
+       const firstLabelLine = fieldPositions[0].line;
+       const beforeFirst = lines.slice(0, firstLabelLine).join('\n').trim();
+       if (hasMeaningfulValue(beforeFirst)) return beforeFirst;
+     }
+     return '';
    }
    if (keyForTopic) {
      cleaned = cleaned.replace(new RegExp(`^${keyForTopic}\\s*[-:–—=.]?\\s*`, 'i'), '').trim();
@@ -2939,6 +3064,33 @@ function downloadEnglishRefsReport() {
   URL.revokeObjectURL(url);
 }
 
+function downloadTopicRepairTxt() {
+  const tasks = (state.topicRepairState?.tasks || []).filter(t => !t.hidden);
+  if (!tasks.length) { showToast('Žádné úlohy k exportu.'); return; }
+  const targetLang = String(localStorage.getItem('strong_target_lang') || 'cs').toLowerCase();
+  const topicLabel = { definice: 'Definice', vyznam: 'Význam', kjv: 'KJV', puvod: 'Původ', specialista: 'Specialista' };
+  const stripKjvForExport = s => String(s || '').replace(/\s*\|\s*KJV:[^|]*/gi, '').trim();
+  const lines = [];
+  for (const task of tasks) {
+    const label = topicLabel[task.topicId] || task.topicId;
+    const enSrc = task.topicId === 'definice' ? stripKjvForExport(task.sourceValue) : (task.sourceValue || '—');
+    lines.push(`=== ${task.key} — ${label} (${task.status}) ===`);
+    lines.push(`EN: ${enSrc || '—'}`);
+    lines.push(`CZ: ${task.currentValue || '—'}`);
+    if (task.candidateValue) lines.push(`Návrh: ${task.candidateValue}`);
+    lines.push('');
+  }
+  const txt = lines.join('\n');
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `topic-repair-${targetLang}-${new Date().toISOString().slice(0, 10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`⬇ Staženo ${tasks.length} úloh`);
+}
+
 function scanEnglishRefsInTranslated() {
   const targetLang = String(localStorage.getItem('strong_target_lang') || 'cs').toLowerCase();
   const EN_REF_RE = /\[[1-4]?[A-Za-z]+\.[^\[\]]+\]/g;
@@ -2958,6 +3110,9 @@ function scanEnglishRefsInTranslated() {
     const srcCore = stripKjv(srcDef);
     // Přeskočit hesla kde je CZ překlad výrazně kratší než EN zdroj (nekompletní překlad)
     if (srcCore.length > 80 && def.length < srcCore.length * 0.35) continue;
+    // Přeskočit hesla kde CZ překlad je identický s EN zdrojem (vůbec nepřeloženo)
+    if (def.replace(/\s+/g, ' ').trim() === srcCore.replace(/\s+/g, ' ').trim()) continue;
+    if (srcDef && def.replace(/\s+/g, ' ').trim() === srcDef.replace(/\s+/g, ' ').trim()) continue;
     results.push({ key, def, converted, enRefs, srcDef, targetLang });
   }
   results.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
@@ -3124,5 +3279,8 @@ syncTopicPromptTemplatesReport,
      applyAllEnglishRefsFixes,
      toggleEnRefsValidateLang,
      downloadEnglishRefsReport,
+     downloadTopicRepairTxt,
+     debugTopicEntry,
+     checkDefinitionQuality,
    };
 }
