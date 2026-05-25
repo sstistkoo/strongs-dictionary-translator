@@ -705,7 +705,15 @@ function enforceSpecialistaFormat(promptText) {
         const def = e.definice || e.def || '';
         const tvar = e.orig || e.tvaroslovi || '';
         const tvarPart = tvar ? ` (${tvar})` : '';
-        return `${e.key} | ${e.greek}${tvarPart}\nD: ${def}`;
+        const lines = [`${e.key} | ${e.greek}${tvarPart}\nD: ${def}`];
+        if (e.preklad) lines.push(`Překlad: ${e.preklad}`);
+        if (e.vysvetleni) lines.push(`Vysvětlení: ${e.vysvetleni}`);
+        if (e.etymol) lines.push(`Etymol: ${e.etymol}`);
+        if (e.twot) lines.push(`TWOT: ${e.twot}`);
+        if (e.greekRefs) lines.push(`Řecké refs: ${e.greekRefs}`);
+        if (e.poznamky) lines.push(`Poznámky: ${e.poznamky}`);
+        if (e.vyznam) lines.push(`Výz: ${e.vyznam}`);
+        return lines.join('\n');
       }).join('\n\n');
       
       const userPromptTemplate = getActiveMainPromptTemplate('batch');
@@ -992,7 +1000,15 @@ function buildPromptMessagesForModelTest(batch, promptType) {
         const def = e.definice || e.def || '';
         const tvar = e.orig || e.tvaroslovi || '';
         const tvarPart = tvar ? ` (${tvar})` : '';
-        return `${e.key} | ${e.greek}${tvarPart}\nD: ${def}`;
+        const lines = [`${e.key} | ${e.greek}${tvarPart}\nD: ${def}`];
+        if (e.preklad) lines.push(`Překlad: ${e.preklad}`);
+        if (e.vysvetleni) lines.push(`Vysvětlení: ${e.vysvetleni}`);
+        if (e.etymol) lines.push(`Etymol: ${e.etymol}`);
+        if (e.twot) lines.push(`TWOT: ${e.twot}`);
+        if (e.greekRefs) lines.push(`Řecké refs: ${e.greekRefs}`);
+        if (e.poznamky) lines.push(`Poznámky: ${e.poznamky}`);
+        if (e.vyznam) lines.push(`Výz: ${e.vyznam}`);
+        return lines.join('\n');
       }).join('\n\n');
 
       const targetLang = localStorage.getItem('strong_target_lang') || 'cz';
@@ -1908,6 +1924,7 @@ const {
   translateSystemPromptText, translateSystemPromptBackToEnglish, reviewSystemPromptWithAI, buildSystemPromptFromRequirement,
   getTopicRepairSystemPrompt, getTopicRepairUserPrompt, buildTopicRepairBatchHeslaText,
   extractTopicValueFromAI,
+  fixBiblicalRefsForTask,
   toggleTopicRepairManualApproval,
 } = topicRepairApi;
 
@@ -4759,6 +4776,7 @@ window.translateSystemPromptBackToEnglish = translateSystemPromptBackToEnglish;
 window.reviewSystemPromptWithAI = reviewSystemPromptWithAI;
 window.buildSystemPromptFromRequirement = buildSystemPromptFromRequirement;
 window.extractTopicValueFromAI = extractTopicValueFromAI;
+window.fixBiblicalRefsForTask = fixBiblicalRefsForTask;
 window.applySystemPromptForCurrentTask = applySystemPromptForCurrentTask;
 window.syncTopicPromptTemplatesReport = syncTopicPromptTemplatesReport;
 window.buildTopicPrompt = buildTopicPrompt;
@@ -4927,7 +4945,19 @@ function printRecentAICalls() {
  function startTopicRepairFlowForMissing() {
    const missingTopic = Object.keys(state.translated).filter(key => getState(key) === 'missing_topic');
    const defQuality = state._defQualityKeys ? [...state._defQualityKeys] : [];
-   const keys = [...new Set([...missingTopic, ...defQuality])];
+   // Přidej klíče kde zdroj má číslovaný seznam (1), 1a)…) ale CZ definice ne → zkrácený překlad
+   const truncatedDef = Object.keys(state.translated).filter(key => {
+     const tEntry = state.translated[key] || {};
+     const czDef = String(tEntry.definice || '').trim();
+     const e = state.entryMap.get(key) || {};
+     const srcDef = String(e.definice || e.def || '').trim();
+     const srcHasNumberedList = /\b1[a-z]?\)/.test(srcDef);
+     const czHasNumberedList = /\b1[a-z]?\)/.test(czDef);
+     if (!czDef) return false;
+     if (!srcDef) return false;
+     return srcHasNumberedList && !czHasNumberedList;
+   });
+   const keys = [...new Set([...missingTopic, ...defQuality, ...truncatedDef])];
    if (!keys.length) {
      showToast(t('toast.topicRepair.noEligible'));
      return;

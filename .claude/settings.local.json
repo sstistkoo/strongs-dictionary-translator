@@ -39,7 +39,9 @@
       "Bash(git diff *)",
       "mcp__Claude_Preview__preview_start",
       "Bash(python3 -c ' *)",
-      "PowerShell(head -20)"
+      "PowerShell(head -20)",
+      "Bash(awk '/^Definice:/{found=1} found && /^KJV Významy:/{found=0} found && /^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž_A-Z ]+:/' \"C:/Users/stistko/CascadeProjects/strongs-dictionary-translator/translatory/strong_finalni_verze.txt\")",
+      "mcp__Claude_in_Chrome__list_connected_browsers"
     ]
   }
 }

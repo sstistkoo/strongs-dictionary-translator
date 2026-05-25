@@ -1442,9 +1442,11 @@ hr.div { border: none; border-top: 1px solid var(--brd); margin: 18px 0; }
     font-size: 10px;
   }
   .limits-code-badge.c429 { background: #7c2d12; color: #fb923c; }
+  .limits-code-badge.c413 { background: #78350f; color: #fde68a; }
   .limits-code-badge.c524 { background: #451a03; color: #f97316; }
   .limits-code-badge.c503, .limits-code-badge.c502, .limits-code-badge.c504, .limits-code-badge.c500 { background: #1e1b4b; color: #a5b4fc; }
-  .limits-code-badge.c401, .limits-code-badge.c403 { background: #450a0a; color: #f87171; }
+  .limits-code-badge.c408, .limits-code-badge.c422 { background: #1e1b4b; color: #a5b4fc; }
+  .limits-code-badge.c400, .limits-code-badge.c401, .limits-code-badge.c403 { background: #450a0a; color: #f87171; }
   .key-switch-row {
     display: flex;
     gap: 8px;

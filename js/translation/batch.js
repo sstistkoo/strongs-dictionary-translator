@@ -923,6 +923,7 @@ saveProgress();
       const reqMs = performance.now() - reqStart;
       const msg = (e?.message || '').toLowerCase();
       const isRate = msg.includes('429') || msg.includes('rate limit') || msg.includes('quota') || msg.includes('too many');
+      const is413 = msg.includes('413') || msg.includes('too large') || msg.includes('content too large');
       upsertModelTestStats(prov, model, {
         status: isRate ? 'RATE_LIMITED' : 'ERROR',
         okKeys: 0,
@@ -949,6 +950,18 @@ saveProgress();
         });
         showToast(t('toast.rateLimit.retryIn', { seconds: cooldownSeconds }));
         return { ok: false, rateLimited: true, cooldownSeconds };
+      }
+      // 413 Content Too Large — dávka příliš velká, automaticky půlíme a zkusíme znovu
+      if (is413 && keys.length > 1 && depth < 4) {
+        const pivot = Math.ceil(keys.length / 2);
+        const half1 = keys.slice(0, pivot);
+        const half2 = keys.slice(pivot);
+        log(`⚠️ 413 Too Large — dělím ${keys.length} hesel → ${half1.length}+${half2.length} (úroveň ${depth + 1})`);
+        showToast(`413: dávka příliš velká, dělím ${keys.length} → ${half1.length}+${half2.length}`);
+        for (const chunk of [half1, half2].filter(c => c.length > 0)) {
+          await translateBatch(chunk, depth + 1);
+        }
+        return { ok: true };
       }
       logError('translateBatch', e, {
         keys: keys.slice(0, 5), // first 5 keys only

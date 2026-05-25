@@ -7,11 +7,13 @@ export function parseTXT(text) {
   const lines = text.split('\n');
   const entries = [];
   let current = null;
+  let pendingField = null;
 
   for (let i = 0; i < lines.length; i++) {
     const lineTrim = lines[i].trim();
     
     if (!lineTrim) {
+      pendingField = null;
       if (current && current.key) {
         entries.push(finishEntry(current));
         current = null;
@@ -21,6 +23,7 @@ export function parseTXT(text) {
     
     const newMatch = lineTrim.match(/^([GH]\d+)\s*\|\s*(.+)$/);
     if (newMatch) {
+      pendingField = null;
       if (current && current.key) {
         entries.push(finishEntry(current));
       }
@@ -31,7 +34,26 @@ export function parseTXT(text) {
     }
     
     if (!current) continue;
-    
+
+    // Handle pending multiline field value (e.g. Výz: value může být víceřádkový)
+    if (pendingField) {
+      const ci2 = lineTrim.indexOf(':');
+      const fn2 = ci2 > 0 ? lineTrim.slice(0, ci2).trim() : '';
+      // Pokud začíná nové známé pole, ukončíme akumulaci a zpracujeme řádek normálně
+      const isNewKnownField = ci2 > 0 && [
+        'BETA','Prepis','Tvaroslovi','Definice','En','En Definition','KJV Výzamy','KJV Výz',
+        'Cz','Výz','Výz','Vyznam','Vokalizace','Vyslovnost','Etymol','TWOT',
+        'Poznamky','Poznámky','Překlad','Vysvětlení','Řecké refs','Kategorie','Vyznam_Cz'
+      ].includes(fn2);
+      if (!isNewKnownField) {
+        // Pokračování hodnoty — akumuluj
+        current[pendingField] = (current[pendingField] ? current[pendingField] + ' ' : '') + lineTrim;
+        continue;
+      }
+      // Nové pole — zahoď pendingField a fall-through k normálnímu zpracování
+      pendingField = null;
+    }
+
     const colonIdx = lineTrim.indexOf(':');
     if (colonIdx === -1) continue;
     
@@ -48,11 +70,15 @@ export function parseTXT(text) {
     else if (fieldName === 'KJV Významy') current.kjv = fieldValue;
     else if (fieldName === 'Cz') { current.cz = fieldValue; current.czDef = fieldValue; }
     // Hebrew fields
+    else if (fieldName === 'Výz' || fieldName === 'Význam' || fieldName === 'Vyznam') {
+      if (fieldValue) current.vyznam = fieldValue;
+      else pendingField = 'vyznam';
+    }
     else if (fieldName === 'Vokalizace') current.vokalizace = fieldValue;
     else if (fieldName === 'Vyslovnost') current.vyslovnost = fieldValue;
     else if (fieldName === 'Etymol') current.etymol = fieldValue;
     else if (fieldName === 'TWOT') current.twot = fieldValue;
-    else if (fieldName === 'Poznamky') current.poznamky = fieldValue;
+    else if (fieldName === 'Poznamky' || fieldName === 'Poznámky') current.poznamky = fieldValue;
     else if (fieldName === 'Překlad') current.preklad = fieldValue;
     else if (fieldName === 'Vysvětlení') current.vysvetleni = fieldValue;
     else if (fieldName === 'Řecké refs') current.greekRefs = fieldValue;
@@ -110,9 +136,21 @@ function finishEntry(e) {
   const tvaroslovi = e.tvaroslovi || '';
   
   if (e.type === 'greek') {
-    return { ...base, orig: tvaroslovi, en: e.en || '', enDef: e.enDef || '', kjv: e.kjv || '', czDef: e.czDef || '', beta: e.beta || '', prepis: e.prepis || '', tvaroslovi: tvaroslovi, vyskyt: vyskyt };
+    return { ...base, orig: tvaroslovi, en: e.en || '', enDef: e.enDef || '', kjv: e.kjv || '', czDef: e.czDef || '', beta: e.beta || '', prepis: e.prepis || '', tvaroslovi: tvaroslovi, vyskyt: vyskyt, vokalizace: e.vokalizace || '', vyslovnost: e.vyslovnost || '', etymol: e.etymol || '', twot: e.twot || '', poznamky: e.poznamky || '', preklad: e.preklad || '', vysvetleni: e.vysvetleni || '', greekRefs: e.greekRefs || '', vyznam: e.vyznam || '' };
   } else if (e.type === 'hebrew') {
-    return { ...base, orig: tvaroslovi, en: e.en || '', enDef: e.enDef || '', kjv: e.kjv || '', beta: '', prepis: e.prepis || '', tvaroslovi: tvaroslovi, vokalizace: e.vokalizace || '', vyslovnost: e.vyslovnost || '', etymol: e.etymol || '', twot: e.twot || '', poznamky: e.poznamky || '', preklad: e.preklad || '', vysvetleni: e.vysvetleni || '', greekRefs: e.greekRefs || '', vyskyt: vyskyt };
+    // Sestavíme plnou definici: vše od Definice: po KJV Výz: (exkluzivně)
+    const defParts = [];
+    if (e.definice) defParts.push(e.definice);
+    if (e.vyznam) defParts.push('Výz: ' + e.vyznam);
+    if (e.twot) defParts.push('TWOT: ' + e.twot);
+    if (e.poznamky) defParts.push('Pozn: ' + e.poznamky);
+    if (e.preklad) defParts.push('Překlad: ' + e.preklad);
+    if (e.etymol) defParts.push('Etymol: ' + e.etymol);
+    if (e.vysvetleni) defParts.push('Vysvětlení: ' + e.vysvetleni);
+    if (e.greekRefs) defParts.push('Řecké refs: ' + e.greekRefs);
+    const fullDefinice = defParts.join(' | ');
+    const hebrewVyskyt = extractVyskyt(fullDefinice);
+    return { ...base, definice: fullDefinice, orig: tvaroslovi, en: e.en || '', enDef: e.enDef || '', kjv: e.kjv || '', beta: '', prepis: e.prepis || '', tvaroslovi: tvaroslovi, vokalizace: e.vokalizace || '', vyslovnost: e.vyslovnost || '', etymol: e.etymol || '', twot: e.twot || '', poznamky: e.poznamky || '', preklad: e.preklad || '', vysvetleni: e.vysvetleni || '', greekRefs: e.greekRefs || '', vyznam: e.vyznam || '', vyskyt: hebrewVyskyt };
   } else {
     // Grammar
     return { ...base, orig: tvaroslovi, en: e.en || '', enDef: e.enDef || '', kjv: e.kjv || '', beta: '', prepis: e.prepis || '', tvaroslovi: tvaroslovi, vokalizace: e.vokalizace || '', kategorie: e.kategorie || '', vyznamCz: e.vyznamCz || '' };

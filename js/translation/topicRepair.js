@@ -81,7 +81,14 @@ function getTopicSourceTextForPreview(key, topicId) {
 
 function getTopicOriginText(key, topicId) {
   const e = state.entryMap.get(key) || {};
-  if (topicId === 'definice') return String(e.definice || e.def || '').trim();
+  if (topicId === 'definice') {
+    // Pro hebrejská hesla e.definice již obsahuje plný blok (Výz, TWOT, Překlad…).
+    // Pro řecká hesla přidáváme enDef pokud se liší.
+    const parts = [e.definice || e.def || ''];
+    if (e.kjv) parts.push(`KJV: ${e.kjv}`);
+    if (e.enDef && e.enDef !== (e.definice || e.def || '')) parts.push(e.enDef);
+    return parts.filter(Boolean).join(' | ');
+  }
   if (topicId === 'kjv') return String(e.kjv || '').trim();
   if (topicId === 'vyznam') return String(e.vyznamCz || e.cz || '').trim();
   return String(e.orig || e.definice || e.def || '').trim();
@@ -223,7 +230,7 @@ function updateTopicRepairModalUI() {
          </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div style="font-size:11px;color:var(--txt2)">
-            <div><b>${t('topicRepair.originalTopic')}</b> ${escHtml(task.currentValue || '—')}</div>
+            <div><b>${t('topicRepair.originalTopic')}</b> ${escHtml(task.currentValue || '—')}${task.topicId === 'definice' && countDefRefs(task.sourceValue || '') > 0 ? ` <button class="hbtn" style="font-size:10px;padding:2px 6px;margin-left:4px;vertical-align:middle" onclick="fixBiblicalRefsForTask(${idx})" title="Nahradit biblické reference v textu dle originálu">🔗 refs</button>` : ''}</div>
             <div style="margin-top:4px"><b>${t('topicRepair.original')}</b> ${escHtml(task.sourceValue || '—')}</div>
           </div>
           <div style="font-size:11px;color:var(--txt)">
@@ -305,6 +312,35 @@ function updateTopicRepairSelectCounts() {
 function countDefRefs(text) {
   return (String(text || '').match(/\d+:\d+/g) || []).length;
 }
+function fixBiblicalRefsForTask(idx) {
+  const task = state.topicRepairState?.tasks?.[idx];
+  if (!task || task.topicId !== 'definice') return;
+  const czText = task.currentValue || '';
+  const srcText = task.sourceValue || '';
+  const REF_RE = /\[[^\[\]]*\d+:\d+[^\[\]]*\]/g;
+  const srcRefs = [...srcText.matchAll(REF_RE)].map(m => m[0]);
+  const czRefMatches = [...czText.matchAll(REF_RE)];
+  if (srcRefs.length === 0 || czRefMatches.length === 0) { showToast('Nebyly nalezeny biblické reference k opravě.'); return; }
+  let result = czText;
+  let offset = 0;
+  czRefMatches.forEach((m, i) => {
+    if (i < srcRefs.length) {
+      const start = m.index + offset;
+      const end = start + m[0].length;
+      const replacement = srcRefs[i];
+      result = result.slice(0, start) + replacement + result.slice(end);
+      offset += replacement.length - m[0].length;
+    }
+  });
+  if (result === czText) { showToast('Reference jsou již ve správném formátu.'); return; }
+  task.currentValue = result;
+  if (!state.translated[task.key]) state.translated[task.key] = {};
+  state.translated[task.key][task.topicId] = result;
+  saveProgress();
+  showToast('🔗 Refs opraveny: ' + task.key);
+  updateTopicRepairModalUI();
+}
+
 
 function buildTopicRepairTasks(keys) {
   const tasks = [];
@@ -321,6 +357,24 @@ function buildTopicRepairTasks(keys) {
       const srcRefs = countDefRefs(e.definice || e.def || '');
       const czRefs = countDefRefs(t.definice || '');
       if (srcRefs > 0 && czRefs < srcRefs) {
+        missing.push('definice');
+      }
+    }
+    // Přidej definice do opravy pokud zdroj má číslovaný seznam (1), 1a)…) ale CZ překlad ne → zkrácený překlad
+    if (!missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
+      const srcDef = String(e.definice || e.def || '').trim();
+      const czDef = String(t.definice || '').trim();
+      const srcHasNumberedList = /\b1[a-z]?\)/.test(srcDef);
+      const czHasNumberedList = /\b1[a-z]?\)/.test(czDef);
+      if (srcHasNumberedList && !czHasNumberedList) {
+        missing.push('definice');
+      }
+    }
+    // Přidej definice do opravy pokud je CZ překlad příliš krátký oproti rozšířenému EN zdroji
+    if (!missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
+      const srcDef = String(e.definice || e.def || '').trim();
+      const czDef = String(t.definice || '').trim();
+      if (srcDef.length > 200 && czDef.length < srcDef.length * 0.35) {
         missing.push('definice');
       }
     }
@@ -1184,7 +1238,10 @@ function buildTopicRepairBatchHeslaText(keys, topicId) {
 
     switch (topicId) {
       case 'definice':
+        // Pro hebrejská hesla e.definice obsahuje plný blok (Výz, TWOT, Překlad…).
         if (e.definice || e.def) lines.push(`D: ${e.definice || e.def || ''}`);
+        if (e.kjv) lines.push(`KJV: ${e.kjv}`);
+        if (e.enDef && e.enDef !== (e.definice || e.def || '')) lines.push(`EN: ${e.enDef}`);
         break;
       case 'vyznam':
         const curMean = String(e.vyznamCz || e.cz || '').trim();
@@ -1492,7 +1549,7 @@ async function runTopicRepairBulkTranslationCore(state, topicId, systemPrompt, u
     // Per-provider nastavení — fallback na globální hodnoty
     const _provLimits = (typeof window !== 'undefined' && window.getProviderLimits) ? window.getProviderLimits() : {};
     const _provBatchRaw = _provLimits[prov]?.batchSize;
-    const effectiveBs = (_provBatchRaw && Number(_provBatchRaw) > 0) ? Math.max(1, Number(_provBatchRaw)) : bs;
+    let effectiveBs = (_provBatchRaw && Number(_provBatchRaw) > 0) ? Math.max(1, Number(_provBatchRaw)) : bs;
     const _provIntervalRaw = _provLimits[prov]?.interval;
     const effectiveIv = (_provIntervalRaw != null && _provIntervalRaw !== '' && Number(_provIntervalRaw) >= 0)
       ? Number(_provIntervalRaw)
@@ -1564,12 +1621,26 @@ async function runTopicRepairBulkTranslationCore(state, topicId, systemPrompt, u
 
       } catch (e) {
         logError('bulkProviderWorker', e, { prov, batchKeys, topicId });
-        applyBulkBatchResult(prov, batchKeys, {}, '', e.message);
-        updateTopicRepairProviderStats();
 
-        // Rate limit — delší cooldown jen pro tohoto providera
         const msgL = (e.message || '').toLowerCase();
         const isRate = msgL.includes('429') || msgL.includes('rate limit') || msgL.includes('quota') || msgL.includes('too many') || msgL.includes('resource_exhausted');
+        const is413 = msgL.includes('413') || msgL.includes('too large') || msgL.includes('content too large');
+
+        if (is413 && batchKeys.length > 1) {
+          // 413 Content Too Large — půlíme batch size a vrátíme hesla do fronty
+          const newBs = Math.max(1, Math.floor(effectiveBs / 2));
+          log(`[${prov}] 413 Too Large — snižuji batch ${effectiveBs}→${newBs}, vracím ${batchKeys.length} hesel do fronty`);
+          effectiveBs = newBs;
+          queueIndex -= batchKeys.length;
+          for (const key of batchKeys) {
+            const task = state.topicRepairState?.tasks?.find(t => t.key === key && t.topicId === topicId);
+            if (task) task.status = 'waiting';
+          }
+          updateTopicRepairModalUI();
+        } else {
+          applyBulkBatchResult(prov, batchKeys, {}, '', e.message);
+        }
+        updateTopicRepairProviderStats();
         const cooldown = isRate
           ? (() => {
               let c = 60;
@@ -1808,6 +1879,15 @@ function buildTopicPrompt(key, topicId) {
   let extraLines = [];
   if (topicId === 'definice') {
     if (e.definice || e.def) extraLines.push(`D: ${e.definice || e.def}`);
+    if (e.kjv) extraLines.push(`KJV: ${e.kjv}`);
+    if (e.enDef) extraLines.push(`EN: ${e.enDef}`);
+    if (e.preklad) extraLines.push(`Překlad: ${e.preklad}`);
+    if (e.vysvetleni) extraLines.push(`Vysvětlení: ${e.vysvetleni}`);
+    if (e.etymol) extraLines.push(`Etymol: ${e.etymol}`);
+    if (e.twot) extraLines.push(`TWOT: ${e.twot}`);
+    if (e.greekRefs) extraLines.push(`Řecké refs: ${e.greekRefs}`);
+    if (e.poznamky) extraLines.push(`Poznámky: ${e.poznamky}`);
+    if (e.vyznam) extraLines.push(`Výz: ${e.vyznam}`);
   }
 
   const sourceText = [firstLine, ...extraLines].join('\n');
@@ -2789,5 +2869,6 @@ syncTopicPromptTemplatesReport,
      getDefaultBatchTopicSystemPrompt,
      getDefaultBatchTopicUserPrompt,
      extractTopicValueFromAI,
+     fixBiblicalRefsForTask,
    };
 }
