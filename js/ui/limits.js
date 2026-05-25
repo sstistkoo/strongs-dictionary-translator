@@ -176,7 +176,7 @@ function getGeminiLimits(model) {
     'gemini-2.5-flash-lite': { rpm: 30, rpd: 1500, tpm: 1000000, tpd: 0 },
     // Preview model limits may vary by account and region.
     'gemini-3.1-pro-preview': { rpm: 5, rpd: 100, tpm: 1000000, tpd: 0 },
-    'gemini-3.1-flash-lite-preview': { rpm: 15, rpd: 1000, tpm: 1000000, tpd: 0 },
+    'gemini-3.1-flash-lite': { rpm: 15, rpd: 1000, tpm: 1000000, tpd: 0 },
     'gemini-2.5-flash-lite-preview-09-2025': { rpm: 15, rpd: 1000, tpm: 1000000, tpd: 0 },
   };
   return limits[model] || { rpm: 15, rpd: 1500, tpm: 1000000, tpd: 0 };

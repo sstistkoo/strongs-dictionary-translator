@@ -51,7 +51,7 @@ export async function preloadPromptPacks() {
   codes.add('en');
   const fetchPromises = Array.from(codes).map(async (code) => {
     try {
-      const resp = await fetch(`./i18n/prompts.${code}.json`, { cache: 'no-store' });
+      const resp = await fetch(`./i18n/prompts.${code}.json`);
       if (resp.ok) {
         PROMPT_PACK_CACHE[code] = await resp.json();
       } else {
@@ -255,7 +255,7 @@ let uiMessagesLoadPromise = null;
 
 export async function fetchUiDictionary(lang) {
   const url = `./i18n/${lang}.json`;
-  const response = await fetch(url, { cache: 'no-store' });
+  const response = await fetch(url);
   if (response.ok) return response.json();
   throw new Error(`HTTP ${response.status} for ${url}`);
 }

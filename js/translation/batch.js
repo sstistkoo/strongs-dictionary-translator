@@ -235,6 +235,7 @@ ORIG: ${e.orig || ''}`;
   
   if (btn) { btn.disabled = false; btn.textContent = t('translate.single.button'); }
   renderDetail();
+  window.invalidateTranslationStateCache?.();
   updateStats();
   renderList();
 }
@@ -298,6 +299,7 @@ async function translateNext() {
   await translateBatch(batch);
   document.getElementById('btnStep').disabled = false;
   document.getElementById('btnStep').textContent = t('btn.step.default');
+  window.invalidateTranslationStateCache?.();
   updateStats();
   renderList();
   if (state.activeKey && state.translated[state.activeKey]) renderDetail();
@@ -999,7 +1001,7 @@ saveProgress();
 async function runGeminiTopicRotationFallback(keys, abortVersion) {
   const prov = 'gemini';
   const apiKey = getApiKeyForModelTest(prov);
-  const model = getPipelineModelForProvider(prov) || 'gemini-3.1-flash-lite-preview';
+  const model = getPipelineModelForProvider(prov) || 'gemini-3.1-flash-lite';
   if (!apiKey) return;
 
   // Seskupit keys podle chyb?j�c�ch t�mat
@@ -1064,7 +1066,7 @@ async function addTopicBatchResult(key, topicId, value, provider, model) {
 async function translateTopicBatchWithGemini(keys, topicId) {
   const prov = 'gemini';
   const apiKey = getApiKeyForModelTest(prov);
-  const model = getPipelineModelForProvider(prov) || 'gemini-3.1-flash-lite-preview';
+  const model = getPipelineModelForProvider(prov) || 'gemini-3.1-flash-lite';
   if (!apiKey) return;
 
   // Na?�st batch prompty z localStorage

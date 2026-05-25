@@ -434,6 +434,7 @@ function saveLangSettings() {
         safeSetLocalStorage(PERSONAL_PROMPT_KEY, textarea.value, 'settingsModals');
       }
     }
+    window.invalidateTargetLangCache?.();
     refreshLanguageAwarePromptOptionLabels();
     applySystemPromptForCurrentTask();
     applyUiLanguage();

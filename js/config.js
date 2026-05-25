@@ -24,7 +24,7 @@ export const PROVIDERS = {
     label: 'Google AI Studio (aistudio.google.com)',
     ph: 'AIza...',
     models: [
-      ['gemini-3.1-flash-lite-preview', 'model.gemini.flashLite31'],
+      ['gemini-3.1-flash-lite', 'model.gemini.flashLite31'],
       ['gemini-2.5-flash-lite', 'model.gemini.flashLite25'],
       ['gemini-2.5-flash', 'model.gemini.flash25'],
       ['gemini-3.1-pro-preview', 'Gemini 3.1 Pro Preview']
@@ -37,7 +37,7 @@ export const PROVIDERS = {
   }
 };
 
-export const GEMINI_SYSTEM_MODEL = 'gemini-3.1-flash-lite-preview';
+export const GEMINI_SYSTEM_MODEL = 'gemini-3.1-flash-lite';
 
 export const LEGACY_STORE_KEY = 'strong_gr_cz_v2';
 export const STORE_KEY_PREFIX = 'strong_gr_cz_v3__';
@@ -57,7 +57,7 @@ export const MODEL_TEST_RAW_OUTPUT_KEY = 'strong_model_test_raw_output_v1';
 export const MODEL_TEST_MODEL_STORAGE_KEY = 'strong_model_test_model_';
 export const MODEL_TEST_PINNED_MODELS = [
   { prov: 'groq', value: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout (Systémový výchozí)' },
-  { prov: 'gemini', value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash-Lite' },
+  { prov: 'gemini', value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite' },
   { prov: 'openrouter', value: 'openrouter/free', label: 'OpenRouter Auto Router' }
 ];
 export const API_KEY_PROFILES_PREFIX = 'strong_apikey_profiles_';

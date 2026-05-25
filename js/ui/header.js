@@ -34,7 +34,7 @@ export function createHeaderApi({ state, t, getTranslationStateForKey, storeKey,
   }
 
   function updateStats() {
-    const doneAll = Object.values(state.translated).filter(tr => isTranslationComplete(tr)).length;
+    const doneAll = Object.keys(state.translated).filter(key => getTranslationStateForKey(key) === 'done').length;
     // Filtrovat entries dle zdrojového jazyka
     const sourceLang = (localStorage.getItem('strong_source_lang') || 'gr').toLowerCase();
     const includeG = sourceLang === 'gr' || sourceLang === 'both';
@@ -50,7 +50,7 @@ export function createHeaderApi({ state, t, getTranslationStateForKey, storeKey,
       const relevantKeys = new Set(relevantEntries.map(e => e.key));
       done = 0;
       for (const key of Object.keys(state.translated)) {
-        if (relevantKeys.has(key) && isTranslationComplete(state.translated[key])) done++;
+        if (relevantKeys.has(key) && getTranslationStateForKey(key) === 'done') done++;
       }
     }
     const remain = total - done;

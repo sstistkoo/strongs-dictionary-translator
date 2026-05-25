@@ -49,7 +49,7 @@ import {
   preloadPromptPacks
 } from './i18n.js';
    import { sleepMs, sleep, debounce, formatAiResponseTime, escHtml } from './utils.js';
-import { getTranslationStateForKey } from './translation/utils.js';
+import { getTranslationStateForKey, precomputeTranslationStates, invalidateTranslationStateCache, invalidateTargetLangCache } from './translation/utils.js';
    import { createCallApi } from './ai/call.js';
    import { StorageStats } from './storageStats.js';
 import {
@@ -101,7 +101,11 @@ import { createListApi } from './ui/list.js';
      fillMissingVyznamFromSource, fillMissingKjvFromSource, annotateEnglishDefinitionsInTranslated,
      applyFallbacksToParsedMap, parseWithOpenRouterNormalization
    } from './translation/utils.js';
-  // Re-export for use in this module
+  // Expose cache invalidation for other modules
+window.invalidateTranslationStateCache = invalidateTranslationStateCache;
+window.invalidateTargetLangCache = invalidateTargetLangCache;
+
+// Re-export for use in this module
 const {
       parseTXT: parseTXTCore,
       buildRetryMessages: buildRetryMessagesCore,
@@ -1616,6 +1620,7 @@ async function initApp(loadingEl) {
   window._entryIndexMap = new Map(state.entries.map((e, i) => [e.key, i]));
 
   state.filteredKeys = state.entries.map(e => e.key);
+  precomputeTranslationStates();
   initVirtualScroll();
   renderList();
   
@@ -4687,6 +4692,7 @@ async function fillAllTopics(key) {
     fillMissingKjvFromSource([key]);
     annotateEnglishDefinitionsInTranslated([key]);
     saveProgress();
+    window.invalidateTranslationStateCache?.();
     renderList();
     updateStats();
     if (state.activeKey === key) {

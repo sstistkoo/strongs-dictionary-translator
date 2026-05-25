@@ -8,6 +8,43 @@ const { parseTranslations: parseTranslationsCore } = core;
 // Lokální kopie pro getTranslationStateForKey (vyhýbá se circular dep s batch.js)
 const _FALLBACK_TOPIC_ORDER = ['definice', 'vyznam', 'kjv', 'puvod', 'specialista'];
 
+// Cache pro targetLang a langChars — localStorage.getItem je drahé při 19k+ iteracích
+let _cachedTargetLang = null;
+let _cachedLangChars = null;
+
+function _getCachedTargetLang() {
+  if (!_cachedTargetLang) {
+    _cachedTargetLang = (localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
+    _cachedLangChars = TARGET_LANG_CHAR_SETS[_cachedTargetLang] || TARGET_LANG_CHAR_SETS.cz;
+  }
+  return _cachedTargetLang;
+}
+
+function _getCachedLangChars() {
+  _getCachedTargetLang();
+  return _cachedLangChars;
+}
+
+export function invalidateTargetLangCache() {
+  _cachedTargetLang = null;
+  _cachedLangChars = null;
+  invalidateTranslationStateCache();
+}
+
+// Cache stavů překladu — přepočítává se jen při změně state.translated
+let _stateCache = null;
+
+export function invalidateTranslationStateCache() {
+  _stateCache = null;
+}
+
+export function precomputeTranslationStates() {
+  _stateCache = new Map();
+  for (const key of Object.keys(state.translated)) {
+    _stateCache.set(key, _computeTranslationState(key));
+  }
+}
+
 function isTopicManuallyApproved(key, topicId) {
   return state.topicRepairManuallyApproved?.has(`${key}:${topicId}`) || false;
 }
@@ -154,24 +191,15 @@ const TARGET_LANG_CHAR_SETS = {
 export function hasTargetLangWord(text) {
   const s = String(text || '').trim();
   if (!s) return false;
-  const targetLang = (localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
-  const charSet = TARGET_LANG_CHAR_SETS[targetLang] || TARGET_LANG_CHAR_SETS.cz;
-  return charSet.test(s);
+  return _getCachedLangChars().test(s);
 }
 
 export function hasCzechWord(text) {
   const s = String(text || '').trim();
   if (!s) return false;
-  const targetLang = (localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
-  if (targetLang === 'ru' || targetLang === 'bg') {
-    const cyrillic = /[\u0400-\u04FF\u0500-\u052F]/;
-    if (cyrillic.test(s)) return true;
-    return false;
-  }
-  const czechDiacritics = /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/;
-  const words = s.split(/\s+/);
-  return words.some(word => czechDiacritics.test(word));
+  return _getCachedLangChars().test(s);
  }
+
 
 export function isDefinitionLikelyEnglish(text) {
   const s = stripDefinitionOriginReferenceTail(String(text || '').trim());
@@ -188,14 +216,15 @@ export function isDefinitionLikelyEnglish(text) {
 export function isDefinitionLowQuality(text) {
   const s = String(text || '').trim();
   if (!s) return true;
+  const langChars = _getCachedLangChars();
+  // Fast path: dostatečně dlouhá definice s cílovým jazykem → přeskočit drahé English kontroly
+  if (s.length >= 30 && langChars.test(s) && !/(🤖|✎|prompt|upravit|edit|button|klik)/i.test(s)) return false;
   if (isDefinitionLikelyEnglish(s)) return true;
   // UI artefakty nebo technický šum místo definice.
   if (/(🤖|✎|prompt|upravit|edit|button|klik)/i.test(s)) return true;
   // Definice má být věcná; krátké, ale smysluplné formulace nechceme trestat.
   const words = s.split(/\s+/).filter(Boolean);
   const hasStructure = /[,:;()]/.test(s);
-  const targetLang = (localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
-  const langChars = TARGET_LANG_CHAR_SETS[targetLang] || TARGET_LANG_CHAR_SETS.cz;
   const hasTargetLangChars = langChars.test(s);
   // Povolit 1–2 slova, pokud obsahují znaky cílového jazyka
   if (words.length <= 2 && hasTargetLangChars) return false;
@@ -223,7 +252,7 @@ export function hasAnyTranslationContent(t) {
   return fields.some(field => hasMeaningfulValue(t[field]));
 }
 
-export function getTranslationStateForKey(key) {
+function _computeTranslationState(key) {
   const t = state.translated[key];
   if (!t || t.skipped) return 'pending';
   if (isTranslationComplete(t, key)) return 'done';
@@ -231,6 +260,14 @@ export function getTranslationStateForKey(key) {
   const failedCount = _countFailedTopics(t, key);
   if (failedCount > 0 && failedCount <= 2) return 'missing_topic';
   return 'failed_partial';
+}
+
+export function getTranslationStateForKey(key) {
+  if (_stateCache) {
+    const cached = _stateCache.get(key);
+    if (cached !== undefined) return cached;
+  }
+  return _computeTranslationState(key);
 }
 
 export function fillMissingVyznamFromSource(keys) {
@@ -359,24 +396,21 @@ export function isTopicValueProblematic(key, topicId, value, translatedEntry) {
   // 3. Pro KJV - pokud je velmi krátké (1-2 slova) a neobsahuje znaky cílového jazyka → pravděpodobně chybí/špatný
   if (topicId === 'kjv') {
     const words = String(value).trim().split(/\s+/).filter(Boolean);
-    const targetLang = (localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
-    const langChars = TARGET_LANG_CHAR_SETS[targetLang] || TARGET_LANG_CHAR_SETS.cz;
+    const langChars = _getCachedLangChars();
     if (words.length <= 2 && !langChars.test(value)) return 'quality';
   }
 
   // 4. Pro původ - pokud je příliš krátký (bez diakritiky/slov) → podezřelé
   if (topicId === 'puvod') {
     const words = String(value).trim().split(/\s+/).filter(Boolean);
-    const targetLang = (localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
-    const langChars = TARGET_LANG_CHAR_SETS[targetLang] || TARGET_LANG_CHAR_SETS.cz;
+    const langChars = _getCachedLangChars();
     if (words.length <= 2 && !langChars.test(value)) return 'quality';
   }
 
   // 5. Pro význam - pokud je 1-2 slova bez diakritiky
   if (topicId === 'vyznam') {
     const words = String(value).trim().split(/\s+/).filter(Boolean);
-    const targetLang = (localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
-    const langChars = TARGET_LANG_CHAR_SETS[targetLang] || TARGET_LANG_CHAR_SETS.cz;
+    const langChars = _getCachedLangChars();
     if (words.length <= 2 && !langChars.test(value)) return 'quality';
   }
 
