@@ -1926,6 +1926,9 @@ const {
   extractTopicValueFromAI,
   fixBiblicalRefsForTask,
   toggleTopicRepairManualApproval,
+  openEnglishRefsModal,
+  applyEnglishRefsFix,
+  applyAllEnglishRefsFixes,
 } = topicRepairApi;
 
 // -- LIMITS + PREVIEW API ----------------------------------------
@@ -4777,6 +4780,9 @@ window.reviewSystemPromptWithAI = reviewSystemPromptWithAI;
 window.buildSystemPromptFromRequirement = buildSystemPromptFromRequirement;
 window.extractTopicValueFromAI = extractTopicValueFromAI;
 window.fixBiblicalRefsForTask = fixBiblicalRefsForTask;
+window.openEnglishRefsModal = openEnglishRefsModal;
+window.applyEnglishRefsFix = applyEnglishRefsFix;
+window.applyAllEnglishRefsFixes = applyAllEnglishRefsFixes;
 window.applySystemPromptForCurrentTask = applySystemPromptForCurrentTask;
 window.syncTopicPromptTemplatesReport = syncTopicPromptTemplatesReport;
 window.buildTopicPrompt = buildTopicPrompt;

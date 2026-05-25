@@ -4,6 +4,7 @@ import { hasMeaningfulValue, isDefinitionLowQuality, isDefinitionLikelyEnglish, 
 import { sleepMs } from '../utils.js';
 import { getResolvedSystemMessage, getResolvedDefaultPrompt } from '../aiPromptsResolve.js';
 import { t, getPromptPack } from '../i18n.js';
+import { convertBiblicalAbbreviations } from '../biblicalAbbreviations.js';
 
 function getDefaultBatchTopicSystemPrompt(topicId) {
     // Vždy použijeme univerzální core system prompt pro všechny scénáře
@@ -221,6 +222,9 @@ function updateTopicRepairModalUI() {
                ${t('topicRepair.batchLabel')}
              </label>
               <span style="font-size:11px;color:${statusColor}">${statusText}${task.provider ? ` · ${task.provider}` : ''}</span>
+               ${task.topicId === 'definice' && countDefRefs(task.sourceValue || '') > 0 ? `
+                 <button class="hbtn" style="font-size:10px;padding:4px 8px" onclick="fixBiblicalRefsForTask(${idx})" title="Opravit biblické zkratky dle originálu a připravit jako návrh">🔗 refs</button>
+               ` : ''}
                ${(!task.hidden || state.showApproved) ? `
                  <button class="hbtn ${task.manuallyApproved ? 'red' : ''}" style="font-size:10px;padding:4px 8px" onclick="toggleTopicRepairManualApproval(${idx})" title="${escHtml(task.manuallyApproved ? (t('topicRepair.unapprove.title') || 'Zrušit označení v pořádku') : (t('topicRepair.manualApproval.title') || 'Označit jako v pořádku'))}">
                    ${task.manuallyApproved ? (t('topicRepair.unapprove') || 'Zrušit') : (t('topicRepair.manualApproval.label') || 'V pořádku')}
@@ -230,7 +234,7 @@ function updateTopicRepairModalUI() {
          </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div style="font-size:11px;color:var(--txt2)">
-            <div><b>${t('topicRepair.originalTopic')}</b> ${escHtml(task.currentValue || '—')}${task.topicId === 'definice' && countDefRefs(task.sourceValue || '') > 0 ? ` <button class="hbtn" style="font-size:10px;padding:2px 6px;margin-left:4px;vertical-align:middle" onclick="fixBiblicalRefsForTask(${idx})" title="Nahradit biblické reference v textu dle originálu">🔗 refs</button>` : ''}</div>
+            <div><b>${t('topicRepair.originalTopic')}</b> ${escHtml(task.currentValue || '—')}</div>
             <div style="margin-top:4px"><b>${t('topicRepair.original')}</b> ${escHtml(task.sourceValue || '—')}</div>
           </div>
           <div style="font-size:11px;color:var(--txt)">
@@ -314,30 +318,69 @@ function countDefRefs(text) {
 }
 function fixBiblicalRefsForTask(idx) {
   const task = state.topicRepairState?.tasks?.[idx];
-  if (!task || task.topicId !== 'definice') return;
+  const DBG = (...a) => console.log('[🔗 refs]', ...a);
+  if (!task) { DBG('task not found, idx=', idx); return; }
+  if (task.topicId !== 'definice') { DBG('topicId není definice:', task.topicId); return; }
   const czText = task.currentValue || '';
   const srcText = task.sourceValue || '';
+  DBG('key:', task.key, '| czText len:', czText.length, '| srcText len:', srcText.length);
   const REF_RE = /\[[^\[\]]*\d+:\d+[^\[\]]*\]/g;
   const srcRefs = [...srcText.matchAll(REF_RE)].map(m => m[0]);
   const czRefMatches = [...czText.matchAll(REF_RE)];
-  if (srcRefs.length === 0 || czRefMatches.length === 0) { showToast('Nebyly nalezeny biblické reference k opravě.'); return; }
+  DBG('srcRefs:', srcRefs);
+  DBG('czRefMatches:', czRefMatches.map(m => m[0]));
+  if (srcRefs.length === 0) { showToast('Originál neobsahuje biblické reference.'); return; }
+  if (czRefMatches.length === 0) { showToast('Překlad neobsahuje biblické reference k nahrazení.'); return; }
+  const extractCVSet = text => new Set([...String(text).matchAll(/(\d+):(\d+)/g)].map(m => `${m[1]}:${m[2]}`));
+  const srcCVMap = new Map();
+  for (const srcRef of srcRefs) {
+    for (const cv of extractCVSet(srcRef)) {
+      if (!srcCVMap.has(cv)) srcCVMap.set(cv, srcRef);
+    }
+  }
+  DBG('srcCVMap:', Object.fromEntries(srcCVMap));
   let result = czText;
   let offset = 0;
-  czRefMatches.forEach((m, i) => {
-    if (i < srcRefs.length) {
-      const start = m.index + offset;
-      const end = start + m[0].length;
-      const replacement = srcRefs[i];
-      result = result.slice(0, start) + replacement + result.slice(end);
-      offset += replacement.length - m[0].length;
+  let changed = 0;
+  for (const m of czRefMatches) {
+    const czCVs = extractCVSet(m[0]);
+    let matchedSrcRef = null;
+    for (const cv of czCVs) {
+      const candidate = srcCVMap.get(cv);
+      if (candidate) { matchedSrcRef = candidate; break; }
     }
-  });
-  if (result === czText) { showToast('Reference jsou již ve správném formátu.'); return; }
-  task.currentValue = result;
-  if (!state.translated[task.key]) state.translated[task.key] = {};
-  state.translated[task.key][task.topicId] = result;
-  saveProgress();
-  showToast('🔗 Refs opraveny: ' + task.key);
+    if (!matchedSrcRef || matchedSrcRef === m[0]) {
+      DBG('skip (no match / identical):', m[0], '→', matchedSrcRef);
+      continue;
+    }
+    const srcCVs = extractCVSet(matchedSrcRef);
+    const sameVerses = czCVs.size === srcCVs.size && [...czCVs].every(cv => srcCVs.has(cv));
+    if (sameVerses) { DBG('skip (sameVerses):', m[0]); continue; }
+    if (czCVs.size > srcCVs.size) { DBG('skip (czCVs > srcCVs, ztráta dat):', m[0], czCVs, '>', srcCVs); continue; }
+    DBG('REPLACE:', m[0], '→', matchedSrcRef);
+    const start = m.index + offset;
+    const end = start + m[0].length;
+    result = result.slice(0, start) + matchedSrcRef + result.slice(end);
+    offset += matchedSrcRef.length - m[0].length;
+    changed++;
+  }
+  DBG('changed (semantic):', changed, '| result after semantic:', result);
+  // Convert any remaining EN-style abbreviations (e.g. [Isa.18:2] → [Iz 18:2]) to target language
+  const targetLang = String(localStorage.getItem('strong_target_lang') || 'cs').toLowerCase();
+  const resultConverted = convertBiblicalAbbreviations(result, targetLang);
+  const abbrChanged = resultConverted !== result;
+  if (abbrChanged) {
+    DBG('abbreviation conversion applied for lang:', targetLang);
+    result = resultConverted;
+    changed++;
+  }
+  DBG('total changed:', changed, '| final result:', result);
+  if (changed === 0) { showToast('Verše se shodují a zkratky jsou neznámé – žádná změna.'); return; }
+  task.candidateValue = result;
+  task.status = 'done';
+  task.checked = true;
+  task.provider = '🔗';
+  showToast(`🔗 Refs opraveny (${changed}): ` + task.key);
   updateTopicRepairModalUI();
 }
 
@@ -352,9 +395,13 @@ function buildTopicRepairTasks(keys) {
       if (topicId === 'vyznam') return !!getTopicOriginText(key, topicId);
       return true;
     });
-    // Přidej definice do opravy pokud chybí biblické refs oproti EN originálu
+    // Pomocná funkce: odstraní KJV segment ze zdrojové definice (není součástí překladu)
+    const stripKjv = s => String(s || '').replace(/\s*\|\s*KJV:[^|]*/gi, '').trim();
+    const srcDefRaw = String(e.definice || e.def || '');
+    const srcDefNoKjv = stripKjv(srcDefRaw);
+    // Přidej definice do opravy pokud chybí biblické refs oproti EN originálu (bez KJV)
     if (!missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
-      const srcRefs = countDefRefs(e.definice || e.def || '');
+      const srcRefs = countDefRefs(srcDefNoKjv);
       const czRefs = countDefRefs(t.definice || '');
       if (srcRefs > 0 && czRefs < srcRefs) {
         missing.push('definice');
@@ -362,20 +409,25 @@ function buildTopicRepairTasks(keys) {
     }
     // Přidej definice do opravy pokud zdroj má číslovaný seznam (1), 1a)…) ale CZ překlad ne → zkrácený překlad
     if (!missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
-      const srcDef = String(e.definice || e.def || '').trim();
       const czDef = String(t.definice || '').trim();
-      const srcHasNumberedList = /\b1[a-z]?\)/.test(srcDef);
+      const srcHasNumberedList = /\b1[a-z]?\)/.test(srcDefNoKjv);
       const czHasNumberedList = /\b1[a-z]?\)/.test(czDef);
       if (srcHasNumberedList && !czHasNumberedList) {
         missing.push('definice');
       }
     }
-    // Přidej definice do opravy pokud je CZ překlad příliš krátký oproti rozšířenému EN zdroji
+    // Přidej definice do opravy pokud je CZ překlad příliš krátký oproti rozšířenému EN zdroji (bez KJV)
     if (!missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
-      const srcDef = String(e.definice || e.def || '').trim();
       const czDef = String(t.definice || '').trim();
-      if (srcDef.length > 200 && czDef.length < srcDef.length * 0.35) {
+      if (srcDefNoKjv.length > 200 && czDef.length < srcDefNoKjv.length * 0.35) {
         missing.push('definice');
+      }
+    }
+    // Odstraň 'definice' z opravy pokud je zdroj bez KJV krátký a CZ překlad je proporcionálně adekvátní
+    if (missing.includes('definice') && hasMeaningfulValue(String(t.definice || ''))) {
+      const czDef = String(t.definice || '').trim();
+      if (srcDefNoKjv.length > 0 && srcDefNoKjv.length < 60 && czDef.length >= srcDefNoKjv.length * 0.25) {
+        missing.splice(missing.indexOf('definice'), 1);
       }
     }
     // Debug log
@@ -472,6 +524,7 @@ function renderTopicRepairModal() {
          <h2 style="color:var(--acc);margin:0">🗔 ${t('topicRepair.modal.title', { count: topicRepairState.tasks.length })}</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="hbtn" onclick="window.startTopicRepairFlowFromClipboard&&window.startTopicRepairFlowFromClipboard()" title="Načte Strong čísla ze schránky a přidá je k opravě">📋 Ze schránky</button>
+          <button class="hbtn" onclick="openEnglishRefsModal()" title="Zobrazí všechna hesla kde biblické refs zůstaly v angličtině">🔗 refs</button>
           <button class="hbtn" id="topicRepairMinimizeBtn" onclick="minimizeTopicRepairModal()">${t('topicRepair.modal.minimize')}</button>
           <button class="hbtn" onclick="closeTopicRepairModalOnly()">${t('topicRepair.modal.closeWindow')}</button>
         </div>
@@ -2820,6 +2873,101 @@ function buildTopicDataBlockForDetail(key, topicId) {
   return lines.join('\n');
 }
 
+// ── English refs scanner modal ──────────────────────────────────────────────
+let _enRefsModalResults = [];
+
+function scanEnglishRefsInTranslated() {
+  const targetLang = String(localStorage.getItem('strong_target_lang') || 'cs').toLowerCase();
+  const EN_REF_RE = /\[[1-4]?[A-Za-z]+\.[^\[\]]+\]/g;
+  const results = [];
+  for (const [key, entry] of Object.entries(state.translated || {})) {
+    const def = String(entry.definice || '');
+    if (!def) continue;
+    const converted = convertBiblicalAbbreviations(def, targetLang);
+    if (converted === def) continue;
+    const enRefs = [...def.matchAll(EN_REF_RE)]
+      .map(m => m[0])
+      .filter(ref => convertBiblicalAbbreviations(ref, targetLang) !== ref);
+    if (enRefs.length === 0) continue;
+    results.push({ key, def, converted, enRefs, targetLang });
+  }
+  results.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+  return results;
+}
+
+function renderEnglishRefsModal() {
+  let modal = document.getElementById('englishRefsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'englishRefsModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:10030;background:rgba(0,0,0,0.65);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
+    document.body.appendChild(modal);
+  }
+  const results = _enRefsModalResults;
+  const rows = results.map((r, idx) => `
+    <div id="enRefsRow_${idx}" style="display:flex;align-items:flex-start;gap:10px;padding:7px 4px;border-bottom:1px solid var(--brd)">
+      <span style="color:var(--acc);min-width:58px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:bold;flex-shrink:0">${escHtml(r.key)}</span>
+      <span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:10px;color:#e07b39;word-break:break-all">${r.enRefs.map(escHtml).join(' ')}</span>
+      <button class="hbtn" style="font-size:10px;padding:3px 8px;flex-shrink:0" onclick="applyEnglishRefsFix(${idx})">Opravit</button>
+    </div>
+  `).join('');
+  modal.innerHTML = `
+    <div style="max-width:860px;width:100%;background:var(--bg2);border:1px solid var(--brd);border-radius:8px;padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <h2 style="color:var(--acc);margin:0;font-size:15px">🔗 Anglické refs v překladech (${results.length})</h2>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${results.length > 0 ? `<button class="hbtn grn" onclick="applyAllEnglishRefsFixes()">✓ Opravit vše (${results.length})</button>` : ''}
+          <button class="hbtn" onclick="document.getElementById('englishRefsModal')?.remove()">✕ Zavřít</button>
+        </div>
+      </div>
+      ${results.length === 0
+        ? '<div style="color:var(--txt2);text-align:center;padding:20px">Žádné anglické refs nenalezeny.</div>'
+        : `<div style="max-height:72vh;overflow-y:auto">${rows}</div>`}
+    </div>
+  `;
+}
+
+function openEnglishRefsModal() {
+  console.log('[🔗 EnRefs] openEnglishRefsModal called');
+  try {
+    _enRefsModalResults = scanEnglishRefsInTranslated();
+    console.log('[🔗 EnRefs] scan results:', _enRefsModalResults.length, _enRefsModalResults.slice(0, 3).map(r => r.key));
+    renderEnglishRefsModal();
+    console.log('[🔗 EnRefs] modal rendered');
+  } catch (err) {
+    console.error('[🔗 EnRefs] ERROR:', err);
+  }
+}
+
+function applyEnglishRefsFix(idx) {
+  const r = _enRefsModalResults[idx];
+  if (!r || !state.translated[r.key]) return;
+  state.translated[r.key].definice = r.converted;
+  saveProgress();
+  if (state.activeKey === r.key && typeof renderDetail === 'function') renderDetail();
+  _enRefsModalResults.splice(idx, 1);
+  renderEnglishRefsModal();
+  showToast(`🔗 Opraveno: ${r.key}`);
+}
+
+function applyAllEnglishRefsFixes() {
+  let applied = 0;
+  const activeNeedsRefresh = _enRefsModalResults.some(r => r.key === state.activeKey);
+  for (const r of _enRefsModalResults) {
+    if (!state.translated[r.key]) continue;
+    state.translated[r.key].definice = r.converted;
+    applied++;
+  }
+  if (applied > 0) {
+    saveProgress();
+    if (activeNeedsRefresh && typeof renderDetail === 'function') renderDetail();
+    if (typeof updateStats === 'function') updateStats();
+  }
+  _enRefsModalResults = [];
+  renderEnglishRefsModal();
+  showToast(`🔗 Opraveno ${applied} hesel`);
+}
+
 return {
      closeTopicRepairModalSafe,
      stopTopicRepairTicker,
@@ -2870,5 +3018,8 @@ syncTopicPromptTemplatesReport,
      getDefaultBatchTopicUserPrompt,
      extractTopicValueFromAI,
      fixBiblicalRefsForTask,
+     openEnglishRefsModal,
+     applyEnglishRefsFix,
+     applyAllEnglishRefsFixes,
    };
 }
