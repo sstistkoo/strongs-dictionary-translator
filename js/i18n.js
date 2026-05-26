@@ -111,53 +111,14 @@ export function getDefaultContentTag() {
 }
 
 /**
- * Kód v závorkách u témat, např. (CZ) / (DE) — dle volby v nastavení jazyků nebo cíle překladu.
+ * Kód v závorkách u témat, např. (CZ) / (SK) — řídí se cílovým jazykem překladu
+ * (`strong_target_lang`, tj. stejným klíčem, podle kterého se vybírá `prompts.*.json`).
+ * Ruční override přes `CONTENT_TAG_LANG_MANUAL_KEY` má přednost.
  */
 export function getContentLangTag() {
   if (typeof localStorage === 'undefined') return 'EN';
-  // Tag v závorkách řídíme jazykem UI, aby nebyl mix (např. Definition (EN) v češtině).
-  const ui = getUiLang();
-  
-   // Map UI language to content tag (brackets language)
-   const UI_TO_CONTENT_TAG = {
-     cs: 'CZ',
-     en: 'EN',
-     sk: 'SK',
-     pl: 'PL',
-     de: 'DE',
-     fr: 'FR',
-     es: 'ES',
-     it: 'IT',
-     pt: 'PT',
-     ru: 'RU',
-     da: 'DA',
-     fi: 'FI',
-     hu: 'HU',
-     nl: 'NL',
-     no: 'NO',
-     ro: 'RO',
-     sv: 'SV',
-   bg: 'BG',
-   el: 'EL',
-   ar: 'AR',
-   tr: 'TR',
-   'zh-CN': 'ZH_CN',
-   ja: 'JA',
-   ko: 'KO',
-   he: 'HE',
-   uk: 'UK'
-};
-  
-  const uiTag = UI_TO_CONTENT_TAG[ui];
-  // Pro základní UI jazyky (CS/EN/SK/PL/DE/FR/ES/IT/PT) mapujeme na odpovídající tag,
-  // pro ostatní používáme manuální nastavení, pokud existuje, jinak mapování nebo default.
-  const BASIC_UI = new Set(['cs', 'en', 'sk', 'pl', 'de', 'fr', 'es', 'it', 'pt']);
-  if (BASIC_UI.has(ui)) return uiTag || 'CZ';
-
-  // Fallback to stored manual tag or default based on target language
   const stored = String(localStorage.getItem(CONTENT_TAG_LANG_KEY) || '').trim();
   const manual = localStorage.getItem(CONTENT_TAG_LANG_MANUAL_KEY) === '1';
-  // Legacy migration: old stored tags without "manual" flag are ignored and we use dynamic default.
   if (stored && manual) return stored;
   return getDefaultContentTag();
 }
