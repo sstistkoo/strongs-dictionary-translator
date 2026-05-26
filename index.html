@@ -60,6 +60,7 @@
       <label id="pipelineMainLabel">Hlavní (Groq)</label>
       <div class="model-sel-wrap">
         <select id="pipelineModelMainGroq" aria-label="Hlavní model Groq" title="Hlavní model Groq"></select>
+        <button class="btn-browse-models" onclick="showProviderModelsModal('groq')" title="Procházet dostupné modely Groq">📚</button>
         <button class="btn-add-model" onclick="addCustomModel('groq')" title="Přidat vlastní model Groq">+</button>
         <button class="btn-del-model" id="btnDelModel_pipelineModelMainGroq" onclick="removeCustomModel('groq','pipelineModelMainGroq')" title="Smazat vlastní model" style="display:none">×</button>
       </div>
@@ -68,6 +69,7 @@
       <label id="pipelineSecondaryGeminiLabel">Sekundární (Gemini)</label>
       <div class="model-sel-wrap">
         <select id="pipelineModelSecondaryGemini" aria-label="Sekundární model Gemini" title="Sekundární model Gemini"></select>
+        <button class="btn-browse-models" onclick="showProviderModelsModal('gemini')" title="Procházet dostupné modely Gemini">📚</button>
         <button class="btn-add-model" onclick="addCustomModel('gemini')" title="Přidat vlastní model Gemini">+</button>
         <button class="btn-del-model" id="btnDelModel_pipelineModelSecondaryGemini" onclick="removeCustomModel('gemini','pipelineModelSecondaryGemini')" title="Smazat vlastní model" style="display:none">×</button>
       </div>
@@ -388,6 +390,7 @@
         <label id="settingsMainModelLabel">Hlavní model (Groq)</label>
         <div class="model-sel-wrap">
           <select id="providerRunMainGroqModel" aria-label="Hlavní model Groq" title="Hlavní model Groq"></select>
+          <button class="btn-browse-models" onclick="showProviderModelsModal('groq')" title="Procházet dostupné modely Groq">📚</button>
           <button class="btn-add-model" onclick="addCustomModel('groq')" title="Přidat vlastní model Groq">+</button>
           <button class="btn-del-model" id="btnDelModel_providerRunMainGroqModel" onclick="removeCustomModel('groq','providerRunMainGroqModel')" title="Smazat vlastní model" style="display:none">×</button>
         </div>
@@ -406,6 +409,7 @@
         <label id="settingsSecondaryGeminiLabel">Sekundární model (Gemini)</label>
         <div class="model-sel-wrap">
           <select id="providerRunSecondaryGeminiModel" aria-label="Sekundární model Gemini" title="Sekundární model Gemini"></select>
+          <button class="btn-browse-models" onclick="showProviderModelsModal('gemini')" title="Procházet dostupné modely Gemini">📚</button>
           <button class="btn-add-model" onclick="addCustomModel('gemini')" title="Přidat vlastní model Gemini">+</button>
           <button class="btn-del-model" id="btnDelModel_providerRunSecondaryGeminiModel" onclick="removeCustomModel('gemini','providerRunSecondaryGeminiModel')" title="Smazat vlastní model" style="display:none">×</button>
         </div>
@@ -476,6 +480,27 @@
         </div>
       </details>
       <button class="modal-btn cancel modal-btn-full modal-btn-top-gap" id="btnLimitsClose" onclick="closeLimitsModal()">✕ Zavřít</button>
+     </div>
+   </div>
+
+   <!-- Provider Models Browser Modal -->
+   <div id="providerModelsModal">
+     <div class="provider-models-modal-box">
+       <button class="close-modal-btn" onclick="closeProviderModelsModal()" aria-label="Zavřít">×</button>
+       <div class="limits-title" id="providerModelsTitle">📚 Dostupné modely</div>
+       <div class="limits-provider" id="providerModelsInfo">Provider: —</div>
+       <div class="provider-models-toolbar">
+         <input type="text" id="providerModelsFilter" placeholder="Filtr (název modelu)…" aria-label="Filtr modelů">
+         <button class="provider-models-docs" id="btnProviderModelsDocs" title="Otevřít oficiální stránku s limity providera">📊 Limity ↗</button>
+         <button class="provider-models-refresh" id="btnProviderModelsRefresh" title="Znovu načíst seznam">↻</button>
+       </div>
+       <div id="providerModelsContent">
+         <div class="limits-loading">Načítám…</div>
+       </div>
+       <div class="provider-models-hint" id="providerModelsHint">
+         Klikni na model pro přidání. <b>RPM</b> = requests/min · <b>RPD</b> = requests/den · <b>TPM</b> = tokens/min · <b>ctx</b> = context window · <b>∞</b> = bez limitu. Limity jsou orientační (free tier, k 2026-05) — autoritativní zdroj otevřeš tlačítkem <b>📊 Limity ↗</b>. Modely v seznamu jsou označené ✓.
+       </div>
+       <button class="modal-btn cancel modal-btn-full modal-btn-top-gap" onclick="closeProviderModelsModal()">✕ Zavřít</button>
      </div>
    </div>
 

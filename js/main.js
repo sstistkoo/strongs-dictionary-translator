@@ -1992,6 +1992,8 @@ const {
   updateModelTestProviderUi, getProviderModelOptions,
   addCustomModelOption,
   removeCustomModelOption,
+  showProviderModelsModal,
+  closeProviderModelsModal,
 } = settingsApi;
 
 const modelTestUiApi = createModelTestUiApi({
@@ -4507,6 +4509,8 @@ window.restoreFromBackup = restoreFromBackup;
 window.updateSetupCompactSummary = updateSetupCompactSummary;
 window.addCustomModel = addCustomModelOption;
 window.removeCustomModel = removeCustomModelOption;
+window.showProviderModelsModal = showProviderModelsModal;
+window.closeProviderModelsModal = closeProviderModelsModal;
 
 function clearModelTestOutput() {
   const output = document.getElementById('modelTestOutput');

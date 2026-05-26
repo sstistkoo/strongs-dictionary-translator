@@ -1724,6 +1724,167 @@ hr.div { border: none; border-top: 1px solid var(--brd); margin: 18px 0; }
     line-height: 1;
   }
   .btn-del-model:hover { border-color: #c0392b; color: #c0392b; }
+  .btn-browse-models {
+    flex-shrink: 0;
+    padding: 0 8px;
+    height: 38px;
+    background: var(--bg4);
+    border: 1px solid var(--brd);
+    border-radius: 4px;
+    color: var(--txt2);
+    font-size: 14px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+  }
+  .btn-browse-models:hover { border-color: var(--acc); color: var(--acc); }
+
+  /* Provider Models Browser Modal */
+  #providerModelsModal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 1004;
+    padding: 16px 0;
+    overflow-y: auto;
+  }
+  #providerModelsModal.show { display: flex; }
+  .provider-models-modal-box {
+    background: var(--bg2);
+    border: 1px solid var(--brd);
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 640px;
+    width: calc(100% - 32px);
+    margin: 16px auto;
+    position: relative;
+    max-height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column;
+  }
+  .provider-models-toolbar {
+    display: flex;
+    gap: 6px;
+    margin: 10px 0 8px 0;
+  }
+  .provider-models-toolbar input[type="text"] {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--bg3);
+    border: 1px solid var(--brd);
+    border-radius: 4px;
+    color: var(--txt);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .provider-models-refresh {
+    padding: 0 12px;
+    background: var(--bg4);
+    border: 1px solid var(--brd);
+    border-radius: 4px;
+    color: var(--txt2);
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+  }
+  .provider-models-refresh:hover { border-color: var(--acc); color: var(--acc); }
+  .provider-models-docs {
+    padding: 0 12px;
+    background: var(--bg4);
+    border: 1px solid var(--brd);
+    border-radius: 4px;
+    color: var(--txt2);
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .provider-models-docs:hover:not(:disabled) { border-color: var(--acc); color: var(--acc); }
+  .provider-models-docs:disabled { opacity: 0.4; cursor: not-allowed; }
+  #providerModelsContent {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--brd);
+    border-radius: 4px;
+    background: var(--bg3);
+    padding: 6px;
+    min-height: 200px;
+    max-height: 50vh;
+  }
+  .provider-model-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--txt);
+    background: var(--bg2);
+    border: 1px solid transparent;
+    margin-bottom: 3px;
+  }
+  .provider-model-row:hover {
+    border-color: var(--acc);
+    background: var(--bg4);
+  }
+  .provider-model-row.is-added {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .provider-model-row.is-added:hover {
+    border-color: var(--brd);
+    background: var(--bg2);
+  }
+  .provider-model-id {
+    flex: 1;
+    min-width: 0;
+    word-break: break-all;
+  }
+  .provider-model-meta {
+    flex-shrink: 0;
+    color: var(--txt3);
+    font-size: 10px;
+  }
+  .provider-model-badge {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--bg4);
+    color: var(--txt3);
+    font-size: 10px;
+  }
+  .provider-model-badge.added {
+    background: var(--acc);
+    color: var(--bg1);
+  }
+  .provider-models-hint {
+    margin-top: 8px;
+    padding: 6px 8px;
+    font-size: 10px;
+    color: var(--txt3);
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg3);
+    border-radius: 4px;
+  }
+  .provider-models-error {
+    padding: 12px;
+    color: #e74c3c;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .provider-models-empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--txt3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
   .mobl-set-row select {
     width: 100%;
     padding: 10px;

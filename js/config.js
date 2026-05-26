@@ -27,7 +27,8 @@ export const PROVIDERS = {
       ['gemini-3.1-flash-lite', 'model.gemini.flashLite31'],
       ['gemini-2.5-flash-lite', 'model.gemini.flashLite25'],
       ['gemini-2.5-flash', 'model.gemini.flash25'],
-      ['gemini-3.1-pro-preview', 'Gemini 3.1 Pro Preview']
+      ['gemini-3.1-pro-preview', 'Gemini 3.1 Pro Preview'],
+      ['gemma-4-26b-it', 'Gemma 4 26B (vysoký denní limit)']
     ]
   },
   openrouter: {
