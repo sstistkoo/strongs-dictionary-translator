@@ -390,123 +390,164 @@ function normalizeReferences(input) {
   return unique.join(', ');
 }
 
+const _LABEL_NORMALIZE = {
+  'V': 'VYZNAM', 'D': 'DEFINICE', 'P': 'PUVOD', 'K': 'KJV', 'S': 'SPECIALISTA',
+  'DEF': 'DEFINICE', 'CZ': 'VYZNAM',
+  'VÝZNAM': 'VYZNAM', 'DEFINICE': 'DEFINICE',
+  'PUVOD': 'PUVOD', 'POUVOD': 'PUVOD', 'POVOD': 'PUVOD',
+  'KJV': 'KJV', 'SPECIALISTA': 'SPECIALISTA',
+  'VYKLAD': 'SPECIALISTA', 'VÝKLAD': 'SPECIALISTA',
+  'KOMENTAR': 'SPECIALISTA', 'KOMENTÁŘ': 'SPECIALISTA', 'EXEGEZE': 'SPECIALISTA',
+  'DEFINITION': 'DEFINICE', 'MEANING': 'VYZNAM',
+  'ORIGIN': 'PUVOD', 'ETYMOLOGY': 'PUVOD', 'ETYMOLOGIES': 'PUVOD',
+  'COMMENTARY': 'SPECIALISTA', 'EXEGESIS': 'SPECIALISTA'
+};
+const _LABEL_RE = /^\s*(VYZNAM|DEFINICE|PUVOD|POUVOD|POVOD|KJV|SPECIALISTA|VYKLAD|VÝKLAD|KOMENTAR|KOMENTÁŘ|EXEGEZE|DEFINITION|MEANING|ORIGIN|ETYMOLOGY|ETYMOLOGIES|COMMENTARY|EXEGESIS|USAGE|DEF|V|D|P|K|S)(?:[:–—=.\s]+)/i;
+const _INNER_LABEL_RE = /^(?:VYZNAM|DEFINICE|PUVOD|KJV|SPECIALISTA|VYKLAD|VÝKLAD|KOMENTAR|KOMENTÁŘ|EXEGEZE|DEF|DEFINITION|MEANING|ORIGIN|COMMENTARY|EXEGESIS|USAGE|V|D|P|K|S)(?:[:：–—=])/u;
+
+function _parseBlockFields(content) {
+  const lines = content.split('\n');
+  const fieldPositions = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(_LABEL_RE);
+    if (!m) continue;
+    let label = m[1].toUpperCase();
+    label = _LABEL_NORMALIZE[label] || label;
+    if (label === 'USAGE') label = '__DELIMITER__';
+    if (['VYZNAM', 'DEFINICE', 'PUVOD', 'KJV', 'SPECIALISTA', '__DELIMITER__'].includes(label)) {
+      fieldPositions.push({ label, startLine: i, labelLen: m[0].length });
+    }
+  }
+  const fields = {};
+  for (let i = 0; i < fieldPositions.length; i++) {
+    const { label, startLine, labelLen } = fieldPositions[i];
+    const endLine = i < fieldPositions.length - 1 ? fieldPositions[i + 1].startLine : lines.length;
+    let value = '';
+    for (let j = startLine; j < endLine; j++) {
+      let ln = lines[j];
+      if (j === startLine) ln = ln.slice(labelLen);
+      ln = ln.trim();
+      if (ln) value += (value ? ' ' : '') + ln;
+    }
+    fields[label] = value.trim();
+  }
+  for (const k of Object.keys(fields)) {
+    if (k !== '__DELIMITER__') fields[k] = fields[k].replace(_INNER_LABEL_RE, '').trim();
+  }
+  return {
+    vyznam: fields['VYZNAM'] || '',
+    definice: fields['DEFINICE'] || '',
+    puvod: fields['PUVOD'] || '',
+    specialista: fields['SPECIALISTA'] || '',
+    kjv: fields['KJV'] || ''
+  };
+}
+
+// Rozpoznání hlavičkového řádku — akceptuje:
+//  - řádek je jen číslo + dekorace (#, *, `, [], (), mezery, G/H prefix)
+//  - hlavička + obsah na stejném řádku — vyžaduje marker (#, *, [, (, G/H prefix),
+//    aby holé "1234 jednotek zboží" nebylo false positive
+function _detectHeaderLine(line, numToKey) {
+  const nums = line.match(/\d+/g);
+  if (nums) {
+    for (const n of nums) {
+      if (numToKey[n]) {
+        const stripped = line
+          .replace(n, '')
+          .replace(/[GgHh]/g, '')
+          .replace(/[#*`\[\]\(\)\-=:.,\s]/g, '');
+        if (stripped.length === 0) return { key: numToKey[n], trailing: '' };
+      }
+    }
+  }
+  const m = line.match(/^([\s#*`\[\(]*)([GgHh]?)(\d+)([#*`\]\)\s]*)\s+(\S.*)$/);
+  if (m) {
+    const openDeco = m[1], ghPrefix = m[2], num = m[3], closeDeco = m[4], trailing = m[5];
+    if (numToKey[num]) {
+      const hasMarker = /[#*`\[\(]/.test(openDeco) || /[#*`\]\)]/.test(closeDeco) || ghPrefix !== '';
+      if (hasMarker) return { key: numToKey[num], trailing: trailing.trim() };
+    }
+  }
+  return null;
+}
+
 export function parseTranslations(raw, keys, translated = {}) {
   const normalized = String(raw || '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-  // Sestavíme sadu čísel která čekáme (G4594 → "4594", H123 → "123")
+  // G4594 → "4594", H123 → "123"
   const numToKey = {};
-  for (const k of keys) {
-    numToKey[k.slice(1)] = k;
+  for (const k of keys) numToKey[k.slice(1)] = k;
+
+  // 1. Rozdělit odpověď na bloky podle hlavičkových řádků.
+  const rawLines = normalized.split('\n');
+  const blocks = [];
+  {
+    let currentKey = null;
+    let currentLines = [];
+    for (const line of rawLines) {
+      const header = _detectHeaderLine(line, numToKey);
+      if (header) {
+        if (currentKey) blocks.push({ key: currentKey, content: currentLines.join('\n').trim() });
+        currentKey = header.key;
+        currentLines = header.trailing ? [header.trailing] : [];
+      } else if (currentKey) {
+        currentLines.push(line);
+      }
+    }
+    if (currentKey) blocks.push({ key: currentKey, content: currentLines.join('\n').trim() });
   }
 
-  // Rozdělíme na bloky — hledáme jakoukoliv sekvenci ### ... číslo ... ###
-  // Tolerujeme mezery, závorky, prefix G/H, markdown bold/code okolo
-  const blocks = normalized.split(/(?=(?:\*{0,2}`?)#{2,4}\s*[\[\(]?[GgHh]?\s*\d+\s*[\]\)]?\s*#{2,4})/);
-
+  // 2. Parsovat fields z každého bloku.
   for (const block of blocks) {
-    // Vytáhnout číslo z hlavičky — tolerujeme libovolný "obal"
-    const km = block.match(/#{2,4}\s*[\[\(]?[GgHh]?\s*(\d+)\s*[\]\)]?\s*#{2,4}/);
-    if (!km) continue;
-    const num = km[1]; // jen číslo, bez prefixu
+    translated[block.key] = { ..._parseBlockFields(block.content), _rawDefinition: block.content };
+  }
 
-    // Porovnat s očekávanými klíči pouze podle čísla
-    const targetKey = numToKey[num];
-    if (!targetKey) continue; // číslo není v naší dávce — přeskočit
-    
-    const content = block.slice(km[0].length).trim();
-    
-    const normalizedLabels = {
-      'V': 'VYZNAM',
-      'D': 'DEFINICE',
-      'P': 'PUVOD',
-      'K': 'KJV',
-      'S': 'SPECIALISTA',
-      'DEF': 'DEFINICE',
-      'CZ': 'VYZNAM',
-      'VÝZNAM': 'VYZNAM',
-      'DEFINICE': 'DEFINICE',
-      'DEFINITION': 'DEFINICE',
-      'MEANING': 'VYZNAM',
-      'ORIGIN': 'PUVOD',
-      'ETYMOLOGY': 'PUVOD',
-      'ETYMOLOGIES': 'PUVOD',
-      'COMMENTARY': 'SPECIALISTA',
-      'EXEGESIS': 'SPECIALISTA',
-      'KJV': 'KJV',
-      'SPECIALISTA': 'SPECIALISTA'
-    };
-    
-    const fieldPositions = [];
-    const lines = content.split('\n');
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      // label followed by colon/space/dash/emdash (single char labels need colon, not \b)
-      // Note: allow optional leading whitespace
-const labelMatch = line.match(/^\s*(VYZNAM|DEFINICE|PUVOD|POUVOD|POVOD|KJV|SPECIALISTA|VYKLAD|VÝKLAD|KOMENTAR|KOMENTÁŘ|EXEGEZE|DEFINITION|MEANING|ORIGIN|ETYMOLOGY|ETYMOLOGIES|COMMENTARY|EXEGESIS|USAGE|DEF|V|D|P|K|S)(?:[:–—=.\s]+)/i);
-       if (labelMatch) {
-         let label = labelMatch[1].toUpperCase();
-         if (label === 'VYKLAD' || label === 'KOMENTAR' || label === 'EXEGEZE') label = 'SPECIALISTA';
-         if (normalizedLabels[label]) {
-           label = normalizedLabels[label];
-         }
-         // USAGE acts as delimiter marker (ends previous field, value not stored)
-         if (label === 'USAGE') label = '__DELIMITER__';
-         if (['VYZNAM', 'DEFINICE', 'PUVOD', 'KJV', 'SPECIALISTA', '__DELIMITER__'].includes(label)) {
-           fieldPositions.push({ label, startLine: i, labelLen: labelMatch[0].length });
-         }
-       }
+  const TOPICS = ['vyznam', 'definice', 'puvod', 'kjv', 'specialista'];
+  const MIN_FILLED = 2;
+  const isAccepted = (entry) => {
+    if (!entry) return false;
+    let filled = 0;
+    for (const t of TOPICS) if (entry[t] && String(entry[t]).trim()) filled++;
+    return filled >= MIN_FILLED;
+  };
+
+  // 3. Count fallback — pro chybějící klíče: pokud se číslo v odpovědi vyskytuje
+  //    právě jednou, najdi blok kolem výskytu a zkus z něj parsovat fields.
+  const stillMissing = keys.filter(k => !isAccepted(translated[k]));
+  for (const k of stillMissing) {
+    const num = k.slice(1);
+    const occRe = new RegExp('(?<!\\d)' + num + '(?!\\d)', 'g');
+    const occurrences = normalized.match(occRe);
+    if (!occurrences || occurrences.length !== 1) continue;
+
+    const idx = normalized.search(occRe);
+    if (idx < 0) continue;
+    let lineStart = normalized.lastIndexOf('\n', idx - 1);
+    lineStart = lineStart < 0 ? 0 : lineStart + 1;
+
+    const tailLines = normalized.slice(lineStart).split('\n');
+    let blockEnd = normalized.length;
+    let runningPos = lineStart;
+    for (let li = 0; li < tailLines.length; li++) {
+      if (li > 0) {
+        const h = _detectHeaderLine(tailLines[li], numToKey);
+        if (h && h.key !== k) { blockEnd = runningPos - 1; break; }
+      }
+      runningPos += tailLines[li].length + 1;
     }
-    
-    const fields = {};
-    for (let i = 0; i < fieldPositions.length; i++) {
-      const current = fieldPositions[i];
-      const label = current.label;
-      const startLine = current.startLine;
-      const labelLen = current.labelLen;
-      
-      let endLine = lines.length;
-      if (i < fieldPositions.length - 1) {
-        endLine = fieldPositions[i + 1].startLine;
-      }
-      
-      let value = '';
-      for (let j = startLine; j < endLine; j++) {
-        let lineContent = lines[j];
-        if (j === startLine) {
-          lineContent = lineContent.slice(labelLen).trim();
-        }
-        lineContent = lineContent.trim();
-        if (lineContent) {
-          value += (value ? ' ' : '') + lineContent;
-        }
-      }
-fields[label] = value.trim();
-      }
-      
-      // Úklid: odstranění vnořených labelů na začátku hodnot (např. "S: SPECIALISTA: text" → jen "text")
-      // Match jen label následovaný : nebo -- (pro SPECIALISTA: nebo VYKLAD - text)
-      const innerLabelRe = /^(?:VYZNAM|DEFINICE|PUVOD|KJV|SPECIALISTA|VYKLAD|VÝKLAD|KOMENTAR|KOMENTÁŘ|EXEGEZE|DEF|DEFINITION|MEANING|ORIGIN|COMMENTARY|EXEGESIS|USAGE|V|D|P|K|S)(?:[:：–—=])/u;
-for (const key of Object.keys(fields)) {
-         if (key !== '__DELIMITER__') fields[key] = fields[key].replace(innerLabelRe, '').trim();
-       }
-     
-      translated[targetKey] = {
-        vyznam: fields['VYZNAM'] || '',
-        definice: fields['DEFINICE'] || '',
-        puvod: fields['PUVOD'] || '',
-        specialista: fields['SPECIALISTA'] || '',
-        kjv: fields['KJV'] || '',
-        _rawDefinition: content
-      };
-  } // end for blocks
-  
-  // Vrátí klíče, které mají prázdné vyznam nebo specialista
-  const missingKeys = keys.filter(function(k) {
-    const entry = translated[k];
-    return !entry || !entry.vyznam || !entry.specialista;
-  });
-  return missingKeys;
+
+    let blockText = normalized.slice(lineStart, blockEnd).trim();
+    const firstNl = blockText.indexOf('\n');
+    const firstLine = firstNl < 0 ? blockText : blockText.slice(0, firstNl);
+    const rest = firstNl < 0 ? '' : blockText.slice(firstNl);
+    const firstLineStripped = firstLine.replace(/^[\s#*`\[\(]*[GgHh]?\d+[#*`\]\)\s]*/, '').trim();
+    blockText = (firstLineStripped + rest).trim();
+
+    const candidate = { ..._parseBlockFields(blockText), _rawDefinition: blockText };
+    if (isAccepted(candidate)) translated[k] = candidate;
+  }
+
+  return keys.filter(k => !isAccepted(translated[k]));
 }
 
 
