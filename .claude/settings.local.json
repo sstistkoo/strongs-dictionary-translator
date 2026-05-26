@@ -46,7 +46,9 @@
       "Bash(node --input-type=module -e ' *)",
       "Bash(node _replace_parser.cjs)",
       "Bash(git checkout *)",
-      "Bash(node --check strong_translator_core_new.js)"
+      "Bash(node --check strong_translator_core_new.js)",
+      "Bash(node --check js/ai/call.js)",
+      "WebFetch(domain:openrouter.ai)"
     ]
   }
 }

@@ -444,48 +444,83 @@ function getTranslationEngineLabel(raw, fallbackProvider, fallbackModel) {
         })()
       };
 
+      // Helpery pro OR požadavek a parsování chyby
+      const postOR = async (body) => {
+        const rr = await fetch('https://corsproxy.io/?https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: orHeaders,
+          body: JSON.stringify(body),
+          signal: controller.signal
+        });
+        const dd = await rr.json();
+        return { rr, dd };
+      };
+      const extractErr = (dd, status) => {
+        const msg = dd?.error?.message || dd?.message || String(status);
+        const code = String(dd?.error?.code || '');
+        const meta = dd?.error?.metadata || null;
+        return { msg, code, meta, metaStr: meta ? ' meta=' + JSON.stringify(meta) : '' };
+      };
+
       // Zjistit jestli model je označen jako no-system (uloženo po prvním 400)
       const noSystemKey = 'or_no_system_' + model.replace(/[^a-z0-9]/gi, '_');
       const useNoSystem = !!localStorage.getItem(noSystemKey);
       const orMessages = useNoSystem ? mergeSystemIntoUser([...messages]) : messages;
 
-      const r = await fetch('https://corsproxy.io/?https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: orHeaders,
-        body: JSON.stringify({ model, messages: orMessages, temperature, max_tokens: maxTokens }),
-        signal: controller.signal
-      });
-     const d = await r.json();
-     if (!r.ok) {
-       const errMsg = d?.error?.message || d?.message || String(r.status);
-       const errCode = String(d?.error?.code || '');
-       if (r.status === 429 || errCode === '429') {
-         throw new Error('429 Rate limit: ' + errMsg);
-       }
-       // 400 - zkusit bez system role pokud jsme ho ještě nezkusili
-       if (r.status === 400 && !useNoSystem) {
-         log('Model ' + model + ' vrátil 400, zkouším bez system role...');
-         const r2 = await fetch('https://corsproxy.io/?https://openrouter.ai/api/v1/chat/completions', {
-           method: 'POST',
-           headers: orHeaders,
-           body: JSON.stringify({ model, messages: mergeSystemIntoUser([...messages]), temperature, max_tokens: maxTokens }),
-           signal: controller.signal
-         });
-         const d2 = await r2.json();
-         if (r2.ok) {
-           // Uložit že tento model nepodporuje system role
-           localStorage.setItem(noSystemKey, '1');
-           log('Model ' + model + ' funguje bez system role - uloženo');
-           validateAPIResponse(d2, 'openrouter');
-           const content2 = extractOpenRouterText(d2);
-           if (!content2) throw new Error('OpenRouter: prázdná odpověď');
-           return { content: content2, usage: d2.usage, resolvedModel: d2.model || model, rateInfo: { provider: 'openrouter' } };
-         }
-         const errMsg2 = d2?.error?.message || String(r2.status);
-         throw new Error('OpenRouter ' + r2.status + ': ' + errMsg2);
-       }
-       throw new Error('OpenRouter ' + r.status + ': ' + errMsg);
-     }
+      // ── L1: plný payload (system + user + temperature + max_tokens) ──
+      let { rr: r, dd: d } = await postOR({ model, messages: orMessages, temperature, max_tokens: maxTokens });
+      let lastMessages = orMessages;
+      let usedLayer = 'L1-full';
+
+      // 429 — rate limit, throw hned
+      if (!r.ok) {
+        const e0 = extractErr(d, r.status);
+        if (r.status === 429 || e0.code === '429') {
+          throw new Error('429 Rate limit: ' + e0.msg);
+        }
+      }
+
+      // ── L2: 400 → spojit system+user do user role ──
+      if (!r.ok && r.status === 400 && !useNoSystem) {
+        const e1 = extractErr(d, r.status);
+        console.warn('[OpenRouter 400 L1] model=' + model + ' msg="' + e1.msg + '" code=' + e1.code + e1.metaStr);
+        console.warn('[OpenRouter 400 L1 detail]', { errMeta: e1.meta, raw: d, sentBody: { model, messages: orMessages, temperature, max_tokens: maxTokens } });
+        logWarn('OpenRouter400', 'Model ' + model + ' L1 selhal: ' + e1.msg + ' — zkouším merged system+user');
+
+        const merged = mergeSystemIntoUser([...messages]);
+        ({ rr: r, dd: d } = await postOR({ model, messages: merged, temperature, max_tokens: maxTokens }));
+        lastMessages = merged;
+        usedLayer = 'L2-merged';
+
+        if (r.ok) {
+          localStorage.setItem(noSystemKey, '1');
+          log('Model ' + model + ' funguje bez system role — uloženo');
+        }
+      }
+
+      // ── L3: 400 → minimální payload (bez temperature, bez max_tokens) ──
+      if (!r.ok && r.status === 400) {
+        const e2 = extractErr(d, r.status);
+        console.warn('[OpenRouter 400 L2] model=' + model + ' msg="' + e2.msg + '" code=' + e2.code + e2.metaStr);
+        console.warn('[OpenRouter 400 L2 detail]', { errMeta: e2.meta, raw: d, sentBody: { model, messages: lastMessages, temperature, max_tokens: maxTokens } });
+        logWarn('OpenRouter400', 'Model ' + model + ' L2 selhal: ' + e2.msg + ' — zkouším minimal payload (bez temperature, bez max_tokens)');
+
+        ({ rr: r, dd: d } = await postOR({ model, messages: lastMessages }));
+        usedLayer = 'L3-minimal';
+
+        if (r.ok) {
+          log('Model ' + model + ' funguje s minimal payloadem');
+        }
+      }
+
+      // Pokud všechny vrstvy selhaly — log a throw
+      if (!r.ok) {
+        const eF = extractErr(d, r.status);
+        console.error('[OpenRouter ' + r.status + ' final] model=' + model + ' layer=' + usedLayer + ' msg="' + eF.msg + '" code=' + eF.code + eF.metaStr);
+        console.error('[OpenRouter ' + r.status + ' final detail]', { errMeta: eF.meta, raw: d, lastMessages });
+        logWarn('OpenRouter' + r.status, 'Model ' + model + ' selhal (' + usedLayer + '): ' + eF.msg + eF.metaStr);
+        throw new Error('OpenRouter ' + r.status + ': ' + eF.msg);
+      }
      validateAPIResponse(d, 'openrouter');
       const content = extractOpenRouterText(d);
       if (!content) throw new Error(t('ai.error.openrouterNoText'));
