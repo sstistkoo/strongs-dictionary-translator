@@ -3,15 +3,137 @@
  */
 import { getResolvedSystemMessage, getResolvedDefaultPrompt } from './js/aiPromptsResolve.js';
 
+/**
+ * Normalizes a field-name label for cross-language matching.
+ * Strips diacritics, lowercases, collapses whitespace.
+ */
+function normalizeLabel(s) {
+  return String(s || '')
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Maps normalized field-name labels (in many languages) to internal field keys.
+ * Mirror of i18n/{lang}.json `export.field.*` plus legacy input-dictionary fields.
+ * - "translated:*" = goes into the translated[key] map (post-translation slot)
+ * - any other string = goes onto the current entry (input-dictionary slot)
+ */
+const LABEL_TO_FIELD = {
+  // === Translated output labels (per-language) ===
+  // Význam / Meaning / Bedeutung / Znaczenie ...
+  'vyznam':        'translated:vyznam',
+  'meaning':       'translated:vyznam',
+  'znaczenie':     'translated:vyznam',
+  'bedeutung':     'translated:vyznam',
+  'signification': 'translated:vyznam',
+  'significato':   'translated:vyznam',
+  'significado':   'translated:vyznam',
+  'znachenie':     'translated:vyznam',
+  // Definice / Definition / Definicja ...
+  'definice':      'translated:definice',
+  'definicia':     'translated:definice',
+  'definition':    'translated:definice',
+  'definicja':     'translated:definice',
+  'definizione':   'translated:definice',
+  'definicion':    'translated:definice',
+  'opredelenie':   'translated:definice',
+  // KJV překlady / KJV preklady / KJV translations / Tłumaczenia KJV ...
+  'kjv':                   'translated:kjv',
+  'kjv preklady':          'translated:kjv',
+  'kjv prekladi':          'translated:kjv',
+  'kjv translations':      'translated:kjv',
+  'kjv ubersetzungen':     'translated:kjv',
+  'tlumaczenia kjv':       'translated:kjv',
+  'traductions kjv':       'translated:kjv',
+  'traduzioni kjv':        'translated:kjv',
+  'kjv perevody':          'translated:kjv',
+  // Původ / Pôvod / Origin / Pochodzenie / Herkunft ...
+  'puvod':         'translated:puvod',
+  'povod':         'translated:puvod',
+  'origin':        'translated:puvod',
+  'origine':       'translated:puvod',
+  'origen':        'translated:puvod',
+  'pochodzenie':   'translated:puvod',
+  'herkunft':      'translated:puvod',
+  'proishozhdenie':'translated:puvod',
+  // Specialista / Specialist / Specjalista / Spezialist ...
+  'specialista':   'translated:specialista',
+  'specialist':    'translated:specialista',
+  'spezialist':    'translated:specialista',
+  'specjalista':   'translated:specialista',
+  'specialiste':   'translated:specialista',
+  'specialiste':   'translated:specialista', // fr (with accent stripped)
+  'speczialista':  'translated:specialista',
+  'specialista bibliyskiy': 'translated:specialista',
+  // Gramatika / Grammar / Gramatyka / Grammatik ...
+  'gramatika':     'tvaroslovi',
+  'grammar':       'tvaroslovi',
+  'gramatyka':     'tvaroslovi',
+  'grammatik':     'tvaroslovi',
+  'grammatica':    'tvaroslovi',
+  'grammaire':     'tvaroslovi',
+  'tvaroslovi':    'tvaroslovi',
+
+  // === Legacy input-dictionary fields (unchanged from original parser) ===
+  'beta': 'beta',
+  'prepis': 'prepis',
+  'en': 'en',
+  'en definition': 'enDef',
+  'cz': 'cz',
+  'vyz': 'vyznam',           // hebrew shorthand → goes to current.vyznam (input)
+  'vokalizace': 'vokalizace',
+  'vyslovnost': 'vyslovnost',
+  'etymol': 'etymol',
+  'twot': 'twot',
+  'poznamky': 'poznamky',
+  'preklad': 'preklad',
+  'vysvetleni': 'vysvetleni',
+  'recke refs': 'greekRefs',
+  'kategorie': 'kategorie',
+  'vyznam cz': 'vyznamCz',
+  'kjv vyznamy': 'kjv',
+  'kjv vyz': 'kjv'
+};
+
+const VALID_LANG_TAG = /^[A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?$/;
+
+/**
+ * Splits "Label (XX)" → { base: "label", lang: "xx" } or just { base } if no tag.
+ */
+function splitLabelLangTag(fieldNameRaw) {
+  const m = fieldNameRaw.match(/^(.+?)\s*\(([^()]+)\)\s*$/);
+  if (m && VALID_LANG_TAG.test(m[2].trim())) {
+    return { base: m[1].trim(), lang: m[2].trim().toLowerCase().replace(/^cs$/, 'cz') };
+  }
+  return { base: fieldNameRaw.trim(), lang: null };
+}
+
 export function parseTXT(text) {
   const lines = text.split('\n');
   const entries = [];
+  const translated = {};
   let current = null;
   let pendingField = null;
+  let detectedTargetLang = null;
+
+  // Helper to record translated-slot value and possibly detect target lang
+  const setTranslated = (key, slot, value, langTag) => {
+    if (!key || !slot) return;
+    if (!translated[key]) translated[key] = {};
+    translated[key][slot] = value;
+    if (langTag && langTag !== 'en' && !detectedTargetLang) {
+      detectedTargetLang = langTag;
+    }
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const lineTrim = lines[i].trim();
-    
+
     if (!lineTrim) {
       pendingField = null;
       if (current && current.key) {
@@ -20,34 +142,36 @@ export function parseTXT(text) {
       }
       continue;
     }
-    
+
     const newMatch = lineTrim.match(/^([GH]\d+)\s*\|\s*(.+)$/);
     if (newMatch) {
       pendingField = null;
       if (current && current.key) {
         entries.push(finishEntry(current));
       }
-      const type = newMatch[1].startsWith('H') && parseInt(newMatch[1].slice(1)) >= 9000 ? 'grammar' 
+      const type = newMatch[1].startsWith('H') && parseInt(newMatch[1].slice(1)) >= 9000 ? 'grammar'
                  : newMatch[1].startsWith('H') ? 'hebrew' : 'greek';
       current = { key: newMatch[1], greek: newMatch[2].trim(), type };
       continue;
     }
-    
+
     if (!current) continue;
 
     // Handle pending multiline field value (e.g. Výz: value může být víceřádkový)
     if (pendingField) {
       const ci2 = lineTrim.indexOf(':');
-      const fn2 = ci2 > 0 ? lineTrim.slice(0, ci2).trim() : '';
-      // Pokud začíná nové známé pole, ukončíme akumulaci a zpracujeme řádek normálně
-      const isNewKnownField = ci2 > 0 && [
-        'BETA','Prepis','Tvaroslovi','Definice','En','En Definition','KJV Výzamy','KJV Výz',
-        'Cz','Výz','Výz','Vyznam','Vokalizace','Vyslovnost','Etymol','TWOT',
-        'Poznamky','Poznámky','Překlad','Vysvětlení','Řecké refs','Kategorie','Vyznam_Cz'
-      ].includes(fn2);
+      const fn2raw = ci2 > 0 ? lineTrim.slice(0, ci2).trim() : '';
+      const fn2Norm = ci2 > 0 ? normalizeLabel(splitLabelLangTag(fn2raw).base) : '';
+      const isNewKnownField = !!LABEL_TO_FIELD[fn2Norm];
       if (!isNewKnownField) {
-        // Pokračování hodnoty — akumuluj
-        current[pendingField] = (current[pendingField] ? current[pendingField] + ' ' : '') + lineTrim;
+        // Pokračování hodnoty — akumuluj (na entry nebo translated dle slotu)
+        if (pendingField.startsWith('translated:')) {
+          const slot = pendingField.slice(11);
+          if (!translated[current.key]) translated[current.key] = {};
+          translated[current.key][slot] = (translated[current.key][slot] ? translated[current.key][slot] + ' ' : '') + lineTrim;
+        } else {
+          current[pendingField] = (current[pendingField] ? current[pendingField] + ' ' : '') + lineTrim;
+        }
         continue;
       }
       // Nové pole — zahoď pendingField a fall-through k normálnímu zpracování
@@ -56,42 +180,90 @@ export function parseTXT(text) {
 
     const colonIdx = lineTrim.indexOf(':');
     if (colonIdx === -1) continue;
-    
-    const fieldName = lineTrim.slice(0, colonIdx).trim();
+
+    const fieldNameRaw = lineTrim.slice(0, colonIdx).trim();
     const fieldValue = lineTrim.slice(colonIdx + 1).trim();
-    
-    // Greek fields
-    if (fieldName === 'BETA') current.beta = fieldValue;
-    else if (fieldName === 'Prepis') current.prepis = fieldValue;
-    else if (fieldName === 'Tvaroslovi') current.tvaroslovi = fieldValue;
-    else if (fieldName === 'Definice') current.definice = fieldValue;
-    else if (fieldName === 'En') current.en = fieldValue;
-    else if (fieldName === 'En Definition') current.enDef = fieldValue;
-    else if (fieldName === 'KJV Významy') current.kjv = fieldValue;
-    else if (fieldName === 'Cz') { current.cz = fieldValue; current.czDef = fieldValue; }
-    // Hebrew fields
-    else if (fieldName === 'Výz' || fieldName === 'Význam' || fieldName === 'Vyznam') {
+
+    const { base, lang } = splitLabelLangTag(fieldNameRaw);
+    const normName = normalizeLabel(base);
+    let target = LABEL_TO_FIELD[normName];
+    if (!target) continue;
+
+    // === Disambiguation by suffix ===
+    // For labels that exist in both input dictionaries and translated outputs
+    // (vyznam, definice, kjv): the language suffix decides which slot they fill.
+    //   • no suffix              → legacy input-dictionary slot on `current`
+    //   • suffix == 'en'         → source enDef slot on `current`
+    //   • suffix != 'en'         → translated[key].*  (and triggers lang detection)
+    // For labels that only ever come from translated output (puvod, specialista),
+    // we always route to translated[].
+    if (target === 'translated:definice') {
+      if (!lang && !detectedTargetLang) {
+        // Legacy input slot — original dictionaries (e.g. strong_finalni_verze.txt)
+        current.definice = fieldValue;
+        continue;
+      }
+      if (lang === 'en') {
+        if (fieldValue) {
+          current.enDef = fieldValue;
+          if (!current.definice) current.definice = fieldValue;
+        } else {
+          pendingField = 'enDef';
+        }
+        continue;
+      }
+      // lang ≠ 'en' OR (lang null + sticky detectedTargetLang) → translated slot, fall through
+    } else if (target === 'translated:vyznam') {
+      if (!lang && !detectedTargetLang) {
+        // Legacy hebrew input slot (current.vyznam, may be multiline)
+        if (fieldValue) current.vyznam = fieldValue;
+        else pendingField = 'vyznam';
+        continue;
+      }
+      // lang present OR sticky detectedTargetLang → translated slot, fall through
+    } else if (target === 'translated:kjv') {
+      if (!lang && !detectedTargetLang) {
+        // Legacy "KJV Významy:" → current.kjv
+        current.kjv = fieldValue;
+        continue;
+      }
+      // lang present OR sticky detectedTargetLang → translated slot, fall through
+    }
+
+    if (target.startsWith('translated:')) {
+      const slot = target.slice(11);
+      if (fieldValue) {
+        setTranslated(current.key, slot, fieldValue, lang);
+      } else {
+        pendingField = target; // multiline accumulator
+        // still detect lang from empty-valued header
+        if (lang && lang !== 'en' && !detectedTargetLang) detectedTargetLang = lang;
+      }
+      continue;
+    }
+
+    // === Legacy input-dictionary slot on current entry ===
+    if (target === 'cz') {
+      current.cz = fieldValue;
+      current.czDef = fieldValue;
+    } else if (target === 'vyznam') {
+      // Hebrew "Výz:" shorthand — empty value triggers multiline accumulation
       if (fieldValue) current.vyznam = fieldValue;
       else pendingField = 'vyznam';
+    } else {
+      current[target] = fieldValue;
     }
-    else if (fieldName === 'Vokalizace') current.vokalizace = fieldValue;
-    else if (fieldName === 'Vyslovnost') current.vyslovnost = fieldValue;
-    else if (fieldName === 'Etymol') current.etymol = fieldValue;
-    else if (fieldName === 'TWOT') current.twot = fieldValue;
-    else if (fieldName === 'Poznamky' || fieldName === 'Poznámky') current.poznamky = fieldValue;
-    else if (fieldName === 'Překlad') current.preklad = fieldValue;
-    else if (fieldName === 'Vysvětlení') current.vysvetleni = fieldValue;
-    else if (fieldName === 'Řecké refs') current.greekRefs = fieldValue;
-    // Grammar fields
-    else if (fieldName === 'Kategorie') current.kategorie = fieldValue;
-    else if (fieldName === 'Vyznam_Cz') current.vyznamCz = fieldValue;
   }
-  
+
   if (current && current.key) {
     entries.push(finishEntry(current));
   }
-  
-  console.log('PARSE: ' + entries.length + ' entries');
+
+  // Attach meta for callers that want it (legacy callers ignore .meta)
+  entries.meta = { detectedTargetLang, translated };
+
+  const translatedCount = Object.keys(translated).length;
+  console.log(`PARSE: ${entries.length} entries${translatedCount ? `, ${translatedCount} with translations` : ''}${detectedTargetLang ? `, target=${detectedTargetLang}` : ''}`);
   return entries;
 }
 

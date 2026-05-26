@@ -189,6 +189,20 @@ function importFile(input) {
       for (const [key, data] of Object.entries(imported)) {
         previewData[key] = data;
       }
+       // Auto-switch target language if the imported file contained a
+       // language-tagged suffix (e.g. "Význam (SK):") — so AI prompts immediately
+       // come from prompts.{detected}.json.
+       const detected = imported && imported._meta && imported._meta.detectedTargetLang;
+       if (detected) {
+         try {
+           const current = String(localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
+           const normalized = String(detected).toLowerCase().replace(/^cs$/, 'cz');
+           if (normalized && normalized !== current) {
+             localStorage.setItem('strong_target_lang', normalized);
+             showToast(`Jazyk překladu přepnut na ${normalized.toUpperCase()} (z přípony v souboru)`);
+           }
+         } catch { /* ignore */ }
+       }
        showPreviewModal(previewData);
        showToast(t('toast.import.found', { count, format: lowerName.endsWith('.json') ? 'JSON' : lowerName.endsWith('.txt') ? 'TXT' : 'auto' }));
      } catch(e) {

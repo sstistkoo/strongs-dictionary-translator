@@ -1366,6 +1366,7 @@ function loadTXT(input) {
     try {
       state.entries = parseTXT(ev.target.result);
       state.currentFileId = computeFileId(state.entries);
+      applyParsedTranslationsAndLang(state.entries);
       const el = document.getElementById('statusTXT');
       el.textContent = `? ${file.name} � ${t('entries.count', { count: state.entries.length })}`;
       el.className = 'file-status ok';
@@ -1380,6 +1381,50 @@ function loadTXT(input) {
      }
   };
   reader.readAsText(file, 'utf-8');
+}
+
+/**
+ * After parseTXT() returns, this:
+ *  1. Merges any translated content from the file into state.translated.
+ *  2. If the file was an exported translation (suffix like `(SK)` detected),
+ *     switches the app's target language so AI prompts come from prompts.{lang}.json.
+ */
+function applyParsedTranslationsAndLang(entries) {
+  if (!entries || !entries.meta) return;
+  const { detectedTargetLang, translated } = entries.meta;
+
+  // Merge translations into state.translated (without overwriting existing)
+  if (translated && Object.keys(translated).length) {
+    state.translated = state.translated || {};
+    for (const [key, payload] of Object.entries(translated)) {
+      if (!payload) continue;
+      const existing = state.translated[key] || {};
+      state.translated[key] = {
+        ...existing,
+        vyznam: payload.vyznam || existing.vyznam || '',
+        definice: payload.definice || existing.definice || '',
+        kjv: payload.kjv || existing.kjv || '',
+        puvod: payload.puvod || existing.puvod || '',
+        specialista: payload.specialista || existing.specialista || ''
+      };
+    }
+  }
+
+  // Auto-switch target language based on file's suffix tag
+  if (detectedTargetLang) {
+    const current = String(localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
+    const normalized = detectedTargetLang.toLowerCase().replace(/^cs$/, 'cz');
+    if (normalized !== current) {
+      try { localStorage.setItem('strong_target_lang', normalized); } catch {}
+      // Make sure the matching prompt pack is loaded so AI uses it immediately
+      if (typeof preloadPromptPacks === 'function') {
+        Promise.resolve(preloadPromptPacks()).catch(() => {});
+      }
+      if (typeof showToast === 'function') {
+        showToast(`Jazyk překladu přepnut na ${normalized.toUpperCase()} (z přípony v souboru)`);
+      }
+    }
+  }
 }
 
 function loadDefaultFile() {
@@ -1405,6 +1450,7 @@ function loadDefaultFile() {
       .then(({ text, source }) => {
         state.entries = parseTXT(text);
         state.currentFileId = computeFileId(state.entries);
+        applyParsedTranslationsAndLang(state.entries);
         localStorage.setItem(LAST_FILE_KEY, DEFAULT_TXT_FILE); // Update cache to what we actually loaded
         document.getElementById('statusTXT').textContent = `? ${DEFAULT_TXT_FILE} � ${t('entries.count', { count: state.entries.length })}`;
         document.getElementById('statusTXT').className = 'file-status ok';
