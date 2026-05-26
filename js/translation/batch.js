@@ -21,10 +21,6 @@ import {
   getDefaultBatchTopicSystemPrompt,
   getDefaultBatchTopicUserPrompt
 } from './topicRepair.js';
-import core from '../../strong_translator_core_new.js';
-
-const { buildRetryMessages } = core;
-
 export function createBatchApi(deps) {
   const {
     state, t, escHtml,
@@ -212,17 +208,24 @@ async function translateSingle(key) {
     if (window.DEBUG_AI) {
     }
     let missingKeys = parseTranslations(raw.content, [key]);
-    
+
+    // Pokud chybí formát, nezkoušíme opravný retry (model nevidí historii a prompt
+    // bez kontextu nedává smysl). Místo toho zavoláme sekundárního providera,
+    // pokud je aktivní, s normálním překladovým promptem.
     if (missingKeys.length > 0) {
-      const entries = `${key}
-D: ${e.definice || e.def || ''}
-KJV: ${e.kjv || ''}
-ORIG: ${e.orig || ''}`;
-      const retryContent = t('batch.retry.missingG', { entries });
-      
-       const raw2 = await callOnce(prov, apiKey, model, buildRetryMessages(retryContent));
-       missingKeys = parseTranslations(raw2.content, [key]);
-     }
+      if (isPipelineSecondaryEnabled('gemini')) {
+        runGeminiTopicRotationFallback([key], state.sideFallbackAbortVersion).catch(err => {
+          logError('GeminiRotation', err, { keys: [key] });
+        });
+      }
+      if (isPipelineSecondaryEnabled('openrouter')) {
+        try {
+          await runOpenRouterBatchFallbackTranslation([key]);
+        } catch (e3) {
+          logError('OpenRouterSingleFallback', e3, { key });
+        }
+      }
+    }
 
    } catch(e) {
      logError('translateSingle', e, {
@@ -804,33 +807,15 @@ async function translateBatch(keys, depth = 0) {
       }
     }
     
-     // Pokud neco chyb�, zkus opravn� retry
-if (missingKeys.length > 0) {
-        log(`? Pokus o opravu form�tu pro ${missingKeys.join(', ')}...`);
-       const entries = keys.map((k) => {
-         const e = state.entryMap.get(k);
-         return e ? `${e.key} | ${e.greek}\nD: ${e.definice || e.def || ''}\nKJV: ${e.kjv || ''}` : '';
-       }).join('\n\n');
-       const retryContent = t('batch.retry.missingG', { entries });
-      
-      try {
-        const raw2 = await callOnce(prov, apiKey, model, buildRetryMessages(retryContent));
-        missingKeys = parseTranslations(raw2.content, keys);
-        preserveBetterTopicsAfterBatch(keys, previousMap);
-        fillMissingVyznamFromSource(keys);
-        fillMissingKjvFromSource(keys);
-        annotateEnglishDefinitionsInTranslated(keys);
-        const retryCount = keys.length - missingKeys.length;
-        if (retryCount > 0) {
-          log(`? Opravn� preklad: ${retryCount} hesel, chyb�: ${missingKeys.length > 0 ? missingKeys.join(', ') : 'nic'}`);
-        } else {
-          log(`? Opravn� preklad nepomohl, chyb�: ${missingKeys.join(', ')}`);
-        }
-      } catch(e2) {
-        log(`? Opravn� pokus selhal: ${e2.message}`);
-      }
+    // Pokud chybí formát: nezkoušíme opravný retry stejným providerem (model nevidí
+    // historii, takže prompt bez kontextu nedává smysl). Místo toho se postaráme
+    // o tyto klíče sekundárním providerem níže (runGeminiTopicRotationFallback /
+    // runOpenRouterBatchFallbackTranslation), který použije normální překladový prompt.
+    if (missingKeys.length > 0) {
+      log(`Chybí formát pro ${missingKeys.join(', ')} — předávám sekundárnímu providerovi.`);
     }
-    
+
+
     // Fallback strategie: pokud po retry chyb� c�st d�vky, zkus men�� d�vku.
     // V AUTO re�imu vypnuto - mohlo by zp?sobit p?ehnan� po?et API vol�n�.
     if (missingKeys.length > 0 && keys.length > 1 && depth < 4 && !state.autoRunning) {
@@ -1198,24 +1183,11 @@ async function translateBatchForProvider(allKeys, prov, apiKey, model) {
       logTokenEntry(prov, inT, outT, inT + outT);
     }
 
-    // Retry pro chybějící — přeskočit pokud je model rotační (nemá konkrétní ID)
-    if (missingKeys.length > 0 && model !== 'openrouter/rotate') {
-      try {
-        const entries = keys.map(k => {
-          const e = state.entryMap.get(k);
-          return e ? (e.key + ' | ' + e.greek + '\nD: ' + (e.definice || e.def || '') + '\nKJV: ' + (e.kjv || '')) : '';
-        }).join('\n\n');
-        const retryContent = t('batch.retry.missingG', { entries });
-        const effectiveModel = raw.resolvedModel || model;
-        const raw2 = await callOnce(prov, apiKey, effectiveModel, buildRetryMessages(retryContent));
-        missingKeys = parseTranslations(raw2.content, keys);
-        preserveBetterTopicsAfterBatch(keys, previousMap);
-        fillMissingVyznamFromSource(keys);
-        fillMissingKjvFromSource(keys);
-        annotateEnglishDefinitionsInTranslated(keys);
-      } catch (e2) {
-        log('Opravný pokus [' + prov + '] selhal: ' + e2.message);
-      }
+    // Opravný retry stejným providerem neposíláme (model nevidí historii, takže
+    // prompt bez kontextu nedává smysl). Chybějící klíče vyřeší sekundární provider
+    // ve vyšší vrstvě (runGeminiTopicRotationFallback / runOpenRouterBatchFallbackTranslation).
+    if (missingKeys.length > 0) {
+      log('Chybí formát [' + prov + '] pro ' + missingKeys.join(', ') + ' — předávám dál.');
     }
 
     // Vyčistit _processing flagy

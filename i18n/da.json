@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Stærk GR → {lang} — Ordbogsoversætter",
   "setup.start": "Redaktør",
   "setup.help": "❓ Hjælp",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON til {file} mangler — oversætteren er åbnet.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Prøv igen: {count}-adgangskoder tilbage",
-  "batch.retry.missingG": "FEJL: Du har udeladt ###G-formateringsmærkerne i dit tidligere svar.\nGENTAG OVERSÆTTELSEN, og for hver adgangskode SKAL du starte med linjen ###G[nummer]###.\nUden den vil oversættelsen ikke blive behandlet!\n\nOversæt disse adgangskoder:\n{entries}",
   "i18nTool.ai.loadedFile": "Indlæst fil: {file}",
   "i18nTool.ai.send.start": "📤 Send",
   "i18nTool.ai.send.stop": "■ Stop med at sende",

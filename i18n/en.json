@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "✅ Strong GR â†’ {lang} ” Dictionary Translator",
   "setup.start": "Editor",
   "setup.help": "❓ Help",
@@ -862,7 +862,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON for {file} is missing ” translator opened.",
   "uiLanguage.separator": "â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€",
   "batch.retry.remaining": "Retry: {count} entries left",
-  "batch.retry.missingG": "ERROR: In your last answer you omitted the ###G format markers.\nREPEAT the translation: every entry MUST start with a line ###G[number]###.\nWithout this, the output cannot be processed.\n\nTranslate these entries:\n{entries}",
   "i18nTool.ai.loadedFile": "Loaded file: {file}",
   "i18nTool.ai.send.start": "ðŸ“¤ Send",
   "i18nTool.ai.send.stop": "â–  Stop sending",

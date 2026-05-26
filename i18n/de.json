@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Strong GR → {lang} – Wörterbuchübersetzer",
   "setup.start": "Editor",
   "setup.help": "❓ Hilfe",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON für {file} fehlt – Übersetzer geöffnet.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Wiederholen: {count}-Passwörter übrig",
-  "batch.retry.missingG": "FEHLER: Sie haben in Ihrer vorherigen Antwort die Formatierungszeichen ###G weggelassen.\nWIEDERHOLEN SIE DIE ÜBERSETZUNG und für jedes Passwort MÜSSEN Sie mit der Zeile ###G[Nummer]### beginnen.\nOhne diese Angabe wird die Übersetzung nicht bearbeitet!\n\nÜbersetzen Sie diese Passwörter:\n{entries}",
   "i18nTool.ai.loadedFile": "Geladene Datei: {file}",
   "i18nTool.ai.send.start": "📤 Senden",
   "i18nTool.ai.send.stop": "■ Stoppen Sie das Senden",

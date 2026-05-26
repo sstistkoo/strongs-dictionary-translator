@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Vahva GR → {lang} — Sanakirjan kääntäjä",
   "setup.start": "Toimittaja",
   "setup.help": "❓ Apua",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON for {file} puuttuu — kääntäjä avattu.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Yritä uudelleen: {count}-salasanat jäljellä",
-  "batch.retry.missingG": "VIRHE: Jätit pois ###G-muotoilumerkit edellisestä vastauksestasi.\nTOISTA KÄÄNNÖS ja jokaisen salasanan kohdalla TÄYTYY aloittaa rivillä ###G[numero]###.\nIlman sitä käännöstä ei käsitellä!\n\nKäännä nämä salasanat:\n{entries}",
   "i18nTool.ai.loadedFile": "Ladattu tiedosto: {file}",
   "i18nTool.ai.send.start": "📤 Lähetä",
   "i18nTool.ai.send.stop": "■ Lopeta lähetys",

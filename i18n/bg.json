@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Силен GR → {lang} — Преводач на речник",
   "setup.start": "редактор",
   "setup.help": "❓ Помощ",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON за {file} липсва — преводачът е отворен.",
   "uiLanguage.separator": "─────────────",
   "batch.retry.remaining": "Повторен опит: остават {count} пароли",
-  "batch.retry.missingG": "ГРЕШКА: Пропуснахте знаците за форматиране ###G в предишния си отговор.\nПОВТОРЕТЕ ПРЕВОДА и за всяка парола ТРЯБВА да започнете с ред ###G[номер]###.\nБез него преводът няма да бъде обработен!\n\nПреведете тези пароли:\n{entries}",
   "i18nTool.ai.loadedFile": "Зареден файл: {file}",
   "i18nTool.ai.send.start": "📤 Изпрати",
   "i18nTool.ai.send.stop": "■ Спрете изпращането",

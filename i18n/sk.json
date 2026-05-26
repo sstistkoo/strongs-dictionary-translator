@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Strong GR → {lang} — Prekladač slovníka",
   "setup.start": "redaktor",
   "setup.help": "❓ Pomocník",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON pre {file} chýba – otvorený prekladač.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Retry: zostáva {count} hesiel",
-  "batch.retry.missingG": "CHYBA: V minulé odpovědi jsi vynechal formátovací značky ###G.\nZOPAKUJ PŘEKLAD a u každého hesla MUSÍŠ začít řádkem ###G[číslo]###.\nBez toho nebude překlad zpracován!\n\nPřelož tato hesla:\n{entries}",
   "i18nTool.ai.loadedFile": "Načítaný súbor: {file}",
   "i18nTool.ai.send.start": "📤 Odoslať",
   "i18nTool.ai.send.stop": "■ Zastaviť odosielanie",

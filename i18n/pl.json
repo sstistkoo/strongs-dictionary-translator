@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Silny GR → {lang} — Tłumacz słownika",
   "setup.start": "Redaktor",
   "setup.help": "❓ Pomóż",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "Brak JSON dla {file} — tłumacz został otwarty.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Spróbuj ponownie: pozostały hasła {count}",
-  "batch.retry.missingG": "BŁĄD: W poprzedniej odpowiedzi pominąłeś znaki formatujące ###G.\nPOWTÓRZ TŁUMACZENIE i dla każdego hasła MUSISZ zacząć od linii ###G[numer]###.\nBez tego tłumaczenie nie zostanie zrealizowane!\n\nPrzetłumacz te hasła:\n{entries}",
   "i18nTool.ai.loadedFile": "Załadowany plik: {file}",
   "i18nTool.ai.send.start": "📤 Wyślij",
   "i18nTool.ai.send.stop": "s Zatrzymaj wysyłanie",

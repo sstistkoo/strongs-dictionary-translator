@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Güçlü GR → {lang} — Sözlük çevirmeni",
   "setup.start": "Editör",
   "setup.help": "❓ Yardım",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "{file} için JSON eksik — çevirmen açıldı.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Yeniden deneyin: {count} şifreleri kaldı",
-  "batch.retry.missingG": "HATA: Önceki cevabınızda ###G biçimlendirme işaretlerini atladınız.\nÇEVİRİYİ TEKRARLAYIN ve her şifre için ###G[sayı]### satırıyla başlamanız GEREKİR.\nBu olmadan çeviri işleme alınmayacaktır!\n\nBu şifreleri çevirin:\n{entries}",
   "i18nTool.ai.loadedFile": "Yüklenen dosya: {file}",
   "i18nTool.ai.send.start": "📤 Gönder",
   "i18nTool.ai.send.stop": "■ Göndermeyi durdur",

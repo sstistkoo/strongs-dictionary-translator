@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Strong GR → {lang} — 사전 번역기",
   "setup.start": "편집자",
   "setup.help": "❓ 도움말",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "{file}용 JSON이 누락되었습니다. 번역기가 열렸습니다.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "재시도: {count} 비밀번호 남음",
-  "batch.retry.missingG": "오류: 이전 답변에서 ###G 형식 표시를 생략했습니다.\n번역을 반복하고 각 비밀번호에 대해 ###G[번호]### 줄로 시작해야 합니다.\n그렇지 않으면 번역이 처리되지 않습니다!\n\n다음 비밀번호를 번역하세요.\n{entries}",
   "i18nTool.ai.loadedFile": "로드된 파일: {file}",
   "i18nTool.ai.send.start": "📤 보내기",
   "i18nTool.ai.send.stop": "■ 전송 중지",

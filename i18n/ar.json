@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Strong GR → {lang} - مترجم القاموس",
   "setup.start": "محرر",
   "setup.help": "❓ مساعدة",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON لـ {file} مفقود — تم فتح المترجم.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "إعادة المحاولة: كلمات مرور {count} متبقية",
-  "batch.retry.missingG": "خطأ: لقد حذفت علامات التنسيق ###G في ردك السابق.\nكرر الترجمة ولكل كلمة مرور يجب أن تبدأ بالسطر ###G[number]###.\nوبدونها لن تتم معالجة الترجمة!\n\nترجمة كلمات المرور هذه:\n{entries}",
   "i18nTool.ai.loadedFile": "الملف المحمل: {file}",
   "i18nTool.ai.send.start": "📤 أرسل",
   "i18nTool.ai.send.stop": "■ التوقف عن الإرسال",

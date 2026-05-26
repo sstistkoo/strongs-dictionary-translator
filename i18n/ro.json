@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Strong GR → {lang} — Traducător de dicționar",
   "setup.start": "Editor",
   "setup.help": "❓ Ajutor",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON pentru {file} lipsește — traducătorul a fost deschis.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Reîncercați: parolele {count} au rămas",
-  "batch.retry.missingG": "EROARE: ați omis marcajele de formatare ###G în răspunsul dvs. anterior.\nREPEȚI TRADUCEREA și pentru fiecare parolă TREBUIE să începi cu linia ###G[număr]###.\nFără el, traducerea nu va fi procesată!\n\nTraduceți aceste parole:\n{entries}",
   "i18nTool.ai.loadedFile": "Fișier încărcat: {file}",
   "i18nTool.ai.send.start": "📤 Trimite",
   "i18nTool.ai.send.stop": "■ Opriți trimiterea",

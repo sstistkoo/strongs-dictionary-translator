@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Strong GR → {lang} — מתרגם מילון",
   "setup.start": "עוֹרֵך",
   "setup.help": "❓ עזרה",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON עבור {file} חסר - המתרגם נפתח.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "נסה שוב: נותרו סיסמאות {count}",
-  "batch.retry.missingG": "ERROR: You omitted the ###G formatting marks in your previous reply.\nREPEAT THE TRANSLATION and for each password you MUST start with the line ###G[number]###.\nWithout it, the translation will not be processed!\n\nתרגם את הסיסמאות האלה:\n{entries}",
   "i18nTool.ai.loadedFile": "קובץ נטען: {file}",
   "i18nTool.ai.send.start": "📤 שלח",
   "i18nTool.ai.send.stop": "■ הפסק לשלוח",

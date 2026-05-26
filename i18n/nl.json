@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Sterke GR → {lang} — Woordenboekvertaler",
   "setup.start": "Editor",
   "setup.help": "❓ Hulp",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON voor {file} ontbreekt - vertaler geopend.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Opnieuw proberen: {count}-wachtwoorden over",
-  "batch.retry.missingG": "FOUT: Je hebt de ###G-opmaaktekens weggelaten in je vorige antwoord.\nHERHAAL DE VERTALING en MOET voor elk wachtwoord beginnen met de regel ###G[nummer]###.\nZonder dit wordt de vertaling niet verwerkt!\n\nVertaal deze wachtwoorden:\n{entries}",
   "i18nTool.ai.loadedFile": "Geladen bestand: {file}",
   "i18nTool.ai.send.start": "📤 Verzenden",
   "i18nTool.ai.send.stop": "■ Stop met verzenden",

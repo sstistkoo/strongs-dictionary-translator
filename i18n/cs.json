@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON pro {file} chybí — otevřen překladač.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Retry: zbývá {count} hesel",
-  "batch.retry.missingG": "CHYBA: V minulé odpovědi jsi vynechal formátovací značky ###G.\nZOPAKUJ PŘEKLAD a u každého hesla MUSÍŠ začít řádkem ###G[číslo]###.\nBez toho nebude překlad zpracován!\n\nPřelož tato hesla:\n{entries}",
   "i18nTool.ai.loadedFile": "Načtený soubor: {file}",
   "i18nTool.ai.send.start": "📤 Odeslat",
   "i18nTool.ai.send.stop": "■ Zastavit odesílání",

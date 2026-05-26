@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Erős GR → {lang} — Szótárfordító",
   "setup.start": "Szerkesztő",
   "setup.help": "❓ Segítség",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "A {file} JSON hiányzik – a fordító megnyitva.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Újrapróbálkozás: {count} jelszavak maradtak",
-  "batch.retry.missingG": "HIBA: előző válaszában kihagyta a ###G formázási jeleket.\nISMÉTELJE MEG A FORDÍTÁST, és minden jelszónál a ###G[szám]### sorral KELL kezdenie.\nEnélkül a fordítás nem kerül feldolgozásra!\n\nFordítsa le ezeket a jelszavakat:\n{entries}",
   "i18nTool.ai.loadedFile": "Betöltött fájl: {file}",
   "i18nTool.ai.send.start": "📤 Küldd",
   "i18nTool.ai.send.stop": "■ Küldés leállítása",

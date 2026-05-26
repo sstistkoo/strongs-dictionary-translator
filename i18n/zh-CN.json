@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ 强 GR → {lang} — 字典翻译",
   "setup.start": "编辑",
   "setup.help": "❓ 帮助",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "{file} 的 JSON 丢失 — 转换器已打开。",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "重试：剩下 {count} 密码",
-  "batch.retry.missingG": "错误：您在之前的回复中省略了 ###G 格式标记。\n重复翻译，对于每个密码，您必须以 ###G[number]### 行开头。\n没有它，翻译将不会被处理！\n\n翻译这些密码：\n{entries}",
   "i18nTool.ai.loadedFile": "已加载文件：{file}",
   "i18nTool.ai.send.start": "📤 发送",
   "i18nTool.ai.send.stop": "■ 停止发送",

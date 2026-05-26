@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Strong GR → {lang} — Traduttore di dizionario",
   "setup.start": "Editore",
   "setup.help": "❓Aiuto",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "Manca JSON per {file}: traduttore aperto.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Riprova: password {count} rimaste",
-  "batch.retry.missingG": "ERRORE: hai omesso i segni di formattazione ###G nella risposta precedente.\nRIPETERE LA TRADUZIONE e per ogni password DEVE iniziare con la riga ###G[numero]###.\nSenza di esso, la traduzione non verrà elaborata!\n\nTraduci queste password:\n{entries}",
   "i18nTool.ai.loadedFile": "File caricato: {file}",
   "i18nTool.ai.send.start": "📤 Invia",
   "i18nTool.ai.send.stop": "■ Interrompere l'invio",

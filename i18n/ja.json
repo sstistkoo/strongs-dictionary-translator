@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ 強い GR → {lang} — 辞書翻訳者",
   "setup.start": "エディタ",
   "setup.help": "❓ ヘルプ",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "{file} の JSON が見つかりません — トランスレーターが開かれました。",
   "uiLanguage.separator": "────────",
   "batch.retry.remaining": "再試行: {count} パスワードが残っています",
-  "batch.retry.missingG": "エラー: 前の返信で ###G 書式設定マークが省略されました。\n翻訳を繰り返します。各パスワードは ###G[number]### の行で始める必要があります。\nこれがないと翻訳は処理されません。\n\nこれらのパスワードを翻訳します。\n{entries}",
   "i18nTool.ai.loadedFile": "ロードされたファイル: {file}",
   "i18nTool.ai.send.start": "📤送信",
   "i18nTool.ai.send.stop": "■ 送信を停止する",

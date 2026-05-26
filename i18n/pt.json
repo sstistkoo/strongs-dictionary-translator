@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ GR forte → {lang} — Tradutor de dicionário",
   "setup.start": "Editor",
   "setup.help": "❓ Ajuda",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON para {file} está faltando – tradutor aberto.",
   "uiLanguage.separator": "────────────",
   "batch.retry.remaining": "Tentar novamente: senhas {count} restantes",
-  "batch.retry.missingG": "ERRO: você omitiu as marcas de formatação ###G em sua resposta anterior.\nREPITA A TRADUÇÃO e para cada senha você DEVE começar com a linha ###G[número]###.\nSem ele, a tradução não será processada!\n\nTraduza estas senhas:\n{entries}",
   "i18nTool.ai.loadedFile": "Arquivo carregado: {file}",
   "i18nTool.ai.send.start": "📤 Enviar",
   "i18nTool.ai.send.stop": "■ Pare de enviar",

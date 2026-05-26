@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Strong GR → {lang} — перекладач словника",
   "setup.start": "редактор",
   "setup.help": "❓ Допомога",
@@ -864,7 +864,6 @@
   "toast.i18nTool.jsonMissingOpened": "JSON для {file} відсутній — перекладач відкрито.",
   "uiLanguage.separator": "─────────────",
   "batch.retry.remaining": "Повторити: залишилося паролів {count}",
-  "batch.retry.missingG": "ПОМИЛКА. Ви пропустили позначки форматування ###G у попередній відповіді.\nПОВТОРІТЬ ПЕРЕКЛАД і для кожного пароля ви ПОВИННІ починатися з рядка ###G[номер]###.\nБез нього переклад не буде виконано!\n\nПерекладіть ці паролі:\n{entries}",
   "i18nTool.ai.loadedFile": "Завантажений файл: {file}",
   "i18nTool.ai.send.start": "📤 Відправити",
   "i18nTool.ai.send.stop": "■ Припинити надсилання",
