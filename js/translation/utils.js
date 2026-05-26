@@ -1,6 +1,7 @@
 // js/translation/utils.js — pomocné funkce pro překlad
 // Importováno přímo v batch.js, detail.js, list.js, header.js
 import { state } from '../state.js';
+import { getLangCharSetOrAny } from '../languageChars.js';
 import core from '../../strong_translator_core_new.js';
 
 const { parseTranslations: parseTranslationsCore } = core;
@@ -15,7 +16,7 @@ let _cachedLangChars = null;
 function _getCachedTargetLang() {
   if (!_cachedTargetLang) {
     _cachedTargetLang = (localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
-    _cachedLangChars = TARGET_LANG_CHAR_SETS[_cachedTargetLang] || TARGET_LANG_CHAR_SETS.cz;
+    _cachedLangChars = getLangCharSetOrAny(_cachedTargetLang);
   }
   return _cachedTargetLang;
 }
@@ -177,17 +178,6 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-const TARGET_LANG_CHAR_SETS = {
-  cz: /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/,
-  cs: /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/,
-  sk: /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/,
-  ru: /[\u0400-\u04FF\u0500-\u052F]/,
-  bg: /[\u0400-\u04FF\u0500-\u052F]/,
-  ch: /[äöüàéèìùáéíóúý]/,
-  sp: /[áéíóúüñ¿¡]/,
-  pl: /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/
-};
-
 export function hasTargetLangWord(text) {
   const s = String(text || '').trim();
   if (!s) return false;
@@ -201,16 +191,26 @@ export function hasCzechWord(text) {
  }
 
 
+// Heuristiky pro detekci anglického textu (Strong's slovník typicky).
+// Práh je vysoký, aby se minimalizovaly false-positivy: stačí jeden match.
+const EN_TEXT_MARKERS = [
+  // Dvě běžná EN funkční slova blízko sebe (silný indikátor anglické věty)
+  /\b(?:the|and|of|to|in|on|at|by|with|for|from)\b[^,;.]{1,40}\b(?:the|and|of|to|in|on|at|by|with|for|from)\b/i,
+  // Strong's typická anglická adverbia/přídavky
+  /\b(?:primarily|figuratively|metaphorically|literally|properly|specifically|generally)\b/i,
+  // Strong's typické konstrukce odkazu
+  /\b(?:see\s+(?:word|also|compare|under)|akin\s+to|derived\s+from|compare\s+(?:with|to))\b/i,
+  // Strong's "from a primitive root" pattern
+  /\bfrom\s+(?:a\s+(?:primary|primitive|prolonged|prim)|an?\s+\w+\s+(?:word|form))\b/i,
+];
+
 export function isDefinitionLikelyEnglish(text) {
   const s = stripDefinitionOriginReferenceTail(String(text || '').trim());
   if (!s) return false;
 
   if (hasCzechWord(s)) return false;
 
-  const markers = [
-    // ... původní a rozšířené
-  ];
-  return markers.some(re => re.test(s));
+  return EN_TEXT_MARKERS.some(re => re.test(s));
 }
 
 export function isDefinitionLowQuality(text) {

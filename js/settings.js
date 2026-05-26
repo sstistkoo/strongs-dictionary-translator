@@ -40,13 +40,31 @@ function getModelTestSelectedModelForProvider(prov) {
 }
 
 const PIPELINE_MODEL_STORAGE_KEY = 'strong_pipeline_model_';
+const CUSTOM_MODELS_KEY = 'strong_custom_models_';
+const CUSTOM_MODEL_ID_RE = /^[a-z0-9._\-]{1,80}$/;
+
+function isValidCustomModelId(m) {
+  return typeof m === 'string' && CUSTOM_MODEL_ID_RE.test(m);
+}
+
+function getCustomModels(prov) {
+  try {
+    const arr = JSON.parse(localStorage.getItem(CUSTOM_MODELS_KEY + prov) || '[]');
+    return Array.isArray(arr) ? arr.filter(isValidCustomModelId) : [];
+  } catch { return []; }
+}
+
+function saveCustomModels(prov, arr) {
+  safeSetLocalStorage(CUSTOM_MODELS_KEY + prov, JSON.stringify(arr), 'settings');
+}
 
 function getPipelineModelForProvider(prov) {
   const hasStaticModel = (provider, model) => {
     if (!model) return false;
     if (provider === 'openrouter') return true;
     const providerModels = Array.isArray(PROVIDERS?.[provider]?.models) ? PROVIDERS[provider].models : [];
-    return providerModels.some(item => Array.isArray(item) && String(item[0] || '').trim() === model);
+    if (providerModels.some(item => Array.isArray(item) && String(item[0] || '').trim() === model)) return true;
+    return getCustomModels(provider).includes(model);
   };
   const saved = String(localStorage.getItem(PIPELINE_MODEL_STORAGE_KEY + prov) || '').trim();
   if (saved && hasStaticModel(prov, saved)) return saved;
@@ -141,18 +159,31 @@ function fillPipelineSelectOptions(prov, selectId) {
     };
     return;
   }
-  const options = (PROVIDERS[prov]?.models || []).map(([value, label]) => ({ value, label: uiLabel(label) || value }));
-  select.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
-  const wanted = getPipelineModelForProvider(prov);
+  const rawCustom = getCustomModels(prov);
+  const staticIds = new Set((PROVIDERS[prov]?.models || []).map(([v]) => v));
+  const customModels = [...new Set(
+    rawCustom
+      .map(m => String(m || '').trim().toLowerCase().replace(/\s+/g, '-'))
+      .filter(m => m && !staticIds.has(m) && isValidCustomModelId(m))
+  )];
+  if (JSON.stringify(rawCustom) !== JSON.stringify(customModels)) saveCustomModels(prov, customModels);
+  const staticOptions = (PROVIDERS[prov]?.models || []).map(([value, label]) => ({ value, label: uiLabel(label) || value }));
+  const customOptions = customModels.map(m => ({ value: m, label: `✎ ${m}`, custom: true }));
+  const options = [...customOptions, ...staticOptions];
+  select.innerHTML = options.map(o => `<option value="${o.value}"${o.custom ? ' data-custom="1"' : ''}>${o.label}</option>`).join('');
+  const savedRaw = String(localStorage.getItem(PIPELINE_MODEL_STORAGE_KEY + prov) || '').trim();
+  const wanted = (savedRaw && customModels.includes(savedRaw)) ? savedRaw : getPipelineModelForProvider(prov);
   if (wanted && Array.from(select.options).some(o => o.value === wanted)) {
     select.value = wanted;
   } else if (select.options.length) {
     select.selectedIndex = 0;
   }
   setPipelineModelForProvider(prov, select.value);
+  updateDeleteBtnForSelect(selectId);
   select.onchange = () => {
     setPipelineModelForProvider(prov, select.value);
     updateSetupCompactSummary();
+    updateDeleteBtnForSelect(selectId);
   };
 }
 
@@ -259,6 +290,73 @@ function getProviderModelOptions(prov) {
   });
 }
 
+const CUSTOM_MODEL_SELECT_IDS = {
+  groq: ['pipelineModelMainGroq', 'providerRunMainGroqModel'],
+  gemini: ['pipelineModelSecondaryGemini', 'providerRunSecondaryGeminiModel'],
+};
+
+function updateDeleteBtnForSelect(selectId) {
+  const select = document.getElementById(selectId);
+  const btn = document.getElementById('btnDelModel_' + selectId);
+  if (!select || !btn) return;
+  const opt = select.options[select.selectedIndex];
+  btn.style.display = (opt && opt.dataset.custom === '1') ? '' : 'none';
+}
+
+function removeCustomModelOption(prov, selectId) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  const model = select.value;
+  const opt = select.options[select.selectedIndex];
+  if (!opt || opt.dataset.custom !== '1') return;
+  saveCustomModels(prov, getCustomModels(prov).filter(m => m !== model));
+  for (const id of (CUSTOM_MODEL_SELECT_IDS[prov] || [])) {
+    const sel = document.getElementById(id);
+    if (!sel) continue;
+    const toRemove = Array.from(sel.options).find(o => o.value === model && o.dataset.custom === '1');
+    if (toRemove) sel.removeChild(toRemove);
+    if (sel.options.length) sel.selectedIndex = 0;
+    setPipelineModelForProvider(prov, sel.value);
+    updateDeleteBtnForSelect(id);
+  }
+  updateSetupCompactSummary();
+}
+
+function addCustomModelOption(prov) {
+  const ids = CUSTOM_MODEL_SELECT_IDS[prov];
+  if (!ids) return;
+  const examples = { groq: 'llama-3.3-70b-versatile', gemini: 'gemini-2.5-flash-lite' };
+  const name = window.prompt(
+    `Zadej API ID modelu ${prov.toUpperCase()} (ne zobrazovaný název).\nPříklad: ${examples[prov] || 'model-id'}`
+  );
+  if (!name || !name.trim()) return;
+  const model = name.trim().toLowerCase().replace(/\s+/g, '-');
+  if (!isValidCustomModelId(model)) {
+    alert('Neplatné ID modelu. Povolené znaky: a-z, 0-9, tečka, podtržítko, pomlčka (max 80 znaků).');
+    return;
+  }
+  const existing = getCustomModels(prov);
+  if (!existing.includes(model)) {
+    existing.unshift(model);
+    saveCustomModels(prov, existing);
+  }
+  for (const id of ids) {
+    const select = document.getElementById(id);
+    if (!select) continue;
+    if (!Array.from(select.options).some(o => o.value === model)) {
+      const opt = document.createElement('option');
+      opt.value = model;
+      opt.textContent = `✎ ${model}`;
+      opt.dataset.custom = '1';
+      select.insertBefore(opt, select.options[0]);
+    }
+    select.value = model;
+    updateDeleteBtnForSelect(id);
+  }
+  setPipelineModelForProvider(prov, model);
+  updateSetupCompactSummary();
+}
+
   return {
     getApiKeyForModelTest,
     getPinnedModelOptionsForProvider,
@@ -279,5 +377,7 @@ function getProviderModelOptions(prov) {
     populateModelTestModelSelect,
     updateModelTestProviderUi,
     getProviderModelOptions,
+    addCustomModelOption,
+    removeCustomModelOption,
   };
 }

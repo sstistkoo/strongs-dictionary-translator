@@ -1694,6 +1694,36 @@ hr.div { border: none; border-top: 1px solid var(--brd); margin: 18px 0; }
     text-transform: uppercase;
     letter-spacing: .1em;
   }
+  .model-sel-wrap { display: flex; gap: 4px; align-items: center; }
+  .model-sel-wrap select { flex: 1; min-width: 0; width: auto !important; }
+  .btn-add-model {
+    flex-shrink: 0;
+    padding: 0 8px;
+    height: 38px;
+    background: var(--bg4);
+    border: 1px solid var(--brd);
+    border-radius: 4px;
+    color: var(--txt2);
+    font-size: 16px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+  }
+  .btn-add-model:hover { border-color: var(--acc); color: var(--acc); }
+  .btn-del-model {
+    flex-shrink: 0;
+    padding: 0 8px;
+    height: 38px;
+    background: var(--bg4);
+    border: 1px solid var(--brd);
+    border-radius: 4px;
+    color: var(--txt3);
+    font-size: 16px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+  }
+  .btn-del-model:hover { border-color: #c0392b; color: #c0392b; }
   .mobl-set-row select {
     width: 100%;
     padding: 10px;

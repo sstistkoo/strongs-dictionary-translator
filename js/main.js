@@ -1990,6 +1990,8 @@ const {
   fillPipelineSelectOptions, initPipelineModelSelectors, initPipelineModelSelectorsInSettingsModal,
   saveModelTestModelSelections, populateModelTestModelSelect,
   updateModelTestProviderUi, getProviderModelOptions,
+  addCustomModelOption,
+  removeCustomModelOption,
 } = settingsApi;
 
 const modelTestUiApi = createModelTestUiApi({
@@ -4503,6 +4505,8 @@ window.deleteApiKeyProfile = deleteApiKeyProfile;
 window.clearProgress = clearProgress;
 window.restoreFromBackup = restoreFromBackup;
 window.updateSetupCompactSummary = updateSetupCompactSummary;
+window.addCustomModel = addCustomModelOption;
+window.removeCustomModel = removeCustomModelOption;
 
 function clearModelTestOutput() {
   const output = document.getElementById('modelTestOutput');

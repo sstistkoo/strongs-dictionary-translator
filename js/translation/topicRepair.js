@@ -5,6 +5,7 @@ import { sleepMs } from '../utils.js';
 import { getResolvedSystemMessage, getResolvedDefaultPrompt } from '../aiPromptsResolve.js';
 import { t, getPromptPack } from '../i18n.js';
 import { convertBiblicalAbbreviations } from '../biblicalAbbreviations.js';
+import { getLangDiacriticRe } from '../languageChars.js';
 
 function getDefaultBatchTopicSystemPrompt(topicId) {
     // Vždy použijeme univerzální core system prompt pro všechny scénáře
@@ -408,19 +409,13 @@ function checkDefinitionQuality(czDef, srcDefNoKjv) {
   const s = String(czDef || '').trim();
   const src = String(srcDefNoKjv || '').trim();
 
-  // 1. Diakritika — detekce nepřeloženého textu
+  // 1. Diakritika / specifické znaky cílového jazyka — detekce nepřeloženého textu.
+  // Pro jazyky bez diakritiky (en) getLangCharSet vrátí null a kontrola se přeskočí.
   const targetLang = String(localStorage.getItem('strong_target_lang') || 'cs').toLowerCase();
-  const diacriticRe = {
-    cz: /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/,
-    cs: /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/,
-    sk: /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/,
-    pl: /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/,
-    ru: /[Ѐ-ӿ]/,
-    bg: /[Ѐ-ӿ]/,
-  }[targetLang] || /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/;
+  const diacriticRe = getLangDiacriticRe(targetLang);
 
   const czWords = s.split(/\s+/).filter(Boolean);
-  if (czWords.length >= 8) {
+  if (diacriticRe && czWords.length >= 8) {
     const withDiacritics = czWords.filter(w => diacriticRe.test(w)).length;
     const ratio = withDiacritics / czWords.length;
     if (ratio < 0.05) {

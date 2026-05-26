@@ -376,12 +376,18 @@ export function uiLabel(labelOrKey) {
   return raw.startsWith('model.') ? t(raw) : raw;
 }
 
+const CUSTOM_MODEL_ID_RE_I18N = /^[a-z0-9._\-]{1,80}$/;
+
 export function refreshStaticProviderSelectLabel(selectId, prov) {
   const select = document.getElementById(selectId);
   if (!select || prov === 'openrouter') return;
   const selected = String(select.value || '').trim();
-  const options = (PROVIDERS[prov]?.models || []).map(([value, label]) => ({ value, label: uiLabel(label) || value }));
-  select.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+  const customOpts = Array.from(select.options)
+    .filter(o => o.dataset.custom === '1' && CUSTOM_MODEL_ID_RE_I18N.test(String(o.value || '')));
+  const staticOpts = (PROVIDERS[prov]?.models || []).map(([value, label]) => ({ value, label: uiLabel(label) || value }));
+  const customHtml = customOpts.map(o => `<option value="${o.value}" data-custom="1">✎ ${o.value}</option>`).join('');
+  const staticHtml = staticOpts.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+  select.innerHTML = customHtml + staticHtml;
   if (selected && Array.from(select.options).some(o => o.value === selected)) {
     select.value = selected;
   }

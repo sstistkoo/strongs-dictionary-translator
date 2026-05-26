@@ -58,11 +58,19 @@
     <label id="pipelineGroupLabel">AI pipeline (hlavní + sekundární)</label>
     <div class="mobl-set-row">
       <label id="pipelineMainLabel">Hlavní (Groq)</label>
-      <select id="pipelineModelMainGroq" aria-label="Hlavní model Groq" title="Hlavní model Groq"></select>
+      <div class="model-sel-wrap">
+        <select id="pipelineModelMainGroq" aria-label="Hlavní model Groq" title="Hlavní model Groq"></select>
+        <button class="btn-add-model" onclick="addCustomModel('groq')" title="Přidat vlastní model Groq">+</button>
+        <button class="btn-del-model" id="btnDelModel_pipelineModelMainGroq" onclick="removeCustomModel('groq','pipelineModelMainGroq')" title="Smazat vlastní model" style="display:none">×</button>
+      </div>
     </div>
     <div class="mobl-set-row">
       <label id="pipelineSecondaryGeminiLabel">Sekundární (Gemini)</label>
-      <select id="pipelineModelSecondaryGemini" aria-label="Sekundární model Gemini" title="Sekundární model Gemini"></select>
+      <div class="model-sel-wrap">
+        <select id="pipelineModelSecondaryGemini" aria-label="Sekundární model Gemini" title="Sekundární model Gemini"></select>
+        <button class="btn-add-model" onclick="addCustomModel('gemini')" title="Přidat vlastní model Gemini">+</button>
+        <button class="btn-del-model" id="btnDelModel_pipelineModelSecondaryGemini" onclick="removeCustomModel('gemini','pipelineModelSecondaryGemini')" title="Smazat vlastní model" style="display:none">×</button>
+      </div>
     </div>
     <div class="mobl-set-row">
       <label id="pipelineSecondaryOpenrouterLabel">Sekundární (OpenRouter)</label>
@@ -378,7 +386,11 @@
        <div class="mobl-modal-title" id="settingsModalTitle">⚙ Nastavení AI</div>
       <div class="mobl-set-row">
         <label id="settingsMainModelLabel">Hlavní model (Groq)</label>
-        <select id="providerRunMainGroqModel" aria-label="Hlavní model Groq" title="Hlavní model Groq"></select>
+        <div class="model-sel-wrap">
+          <select id="providerRunMainGroqModel" aria-label="Hlavní model Groq" title="Hlavní model Groq"></select>
+          <button class="btn-add-model" onclick="addCustomModel('groq')" title="Přidat vlastní model Groq">+</button>
+          <button class="btn-del-model" id="btnDelModel_providerRunMainGroqModel" onclick="removeCustomModel('groq','providerRunMainGroqModel')" title="Smazat vlastní model" style="display:none">×</button>
+        </div>
       </div>
       <div class="mobl-set-row">
         <label id="settingsGroqMaxLabel">Groq · Limit tokenů</label>
@@ -392,7 +404,11 @@
       </div>
       <div class="mobl-set-row">
         <label id="settingsSecondaryGeminiLabel">Sekundární model (Gemini)</label>
-        <select id="providerRunSecondaryGeminiModel" aria-label="Sekundární model Gemini" title="Sekundární model Gemini"></select>
+        <div class="model-sel-wrap">
+          <select id="providerRunSecondaryGeminiModel" aria-label="Sekundární model Gemini" title="Sekundární model Gemini"></select>
+          <button class="btn-add-model" onclick="addCustomModel('gemini')" title="Přidat vlastní model Gemini">+</button>
+          <button class="btn-del-model" id="btnDelModel_providerRunSecondaryGeminiModel" onclick="removeCustomModel('gemini','providerRunSecondaryGeminiModel')" title="Smazat vlastní model" style="display:none">×</button>
+        </div>
       </div>
       <div class="mobl-set-row">
         <label id="settingsGeminiMaxLabel">Gemini · Limit tokenů</label>
