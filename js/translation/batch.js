@@ -1161,6 +1161,7 @@ async function translateBatchForProvider(allKeys, prov, apiKey, model) {
           combined.ok = false;
           if (r.rateLimited) combined.rateLimited = true;
           if (r.cooldownSeconds) combined.cooldownSeconds = r.cooldownSeconds;
+          if (r.limitReached) { combined.limitReached = true; break; }
         }
       }
       return combined;

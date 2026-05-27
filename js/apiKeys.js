@@ -73,6 +73,8 @@ function onApiKeyProfileChange() {
   if (selected === '__manual__') {
     localStorage.removeItem(API_KEY_ACTIVE_PROFILE_PREFIX + prov);
     saveApiKey();
+    window.restoreProviderReqCounts?.();
+    window.restoreProviderTokenCounts?.();
     return;
   }
   const profiles = getApiKeyProfiles(prov);
@@ -81,6 +83,8 @@ function onApiKeyProfileChange() {
   document.getElementById('apiKey').value = profile.key || '';
   localStorage.setItem(API_KEY_ACTIVE_PROFILE_PREFIX + prov, profile.id);
   saveApiKey();
+  window.restoreProviderReqCounts?.();
+  window.restoreProviderTokenCounts?.();
   showToast(t('toast.apiKey.activeProfile', { name: profile.name || t('apiKey.profile.unnamed') }));
 }
 
@@ -125,6 +129,8 @@ function deleteApiKeyProfile() {
   setApiKeyProfiles(prov, filtered);
   localStorage.removeItem(API_KEY_ACTIVE_PROFILE_PREFIX + prov);
   setupApiKeySwitcher(prov);
+  window.restoreProviderReqCounts?.();
+  window.restoreProviderTokenCounts?.();
   showToast(t('toast.apiKey.deleted'));
 }
 
