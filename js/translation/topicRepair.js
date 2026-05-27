@@ -324,7 +324,8 @@ function updateTopicRepairSelectCounts() {
 }
 
 function countDefRefs(text) {
-  return (String(text || '').match(/\d+:\d+/g) || []).length;
+  // Matched both EN colon format (9:4) and CZ/SK comma format (9,4)
+  return (String(text || '').match(/\d+[,:]\d+/g) || []).length;
 }
 function fixBiblicalRefsForTask(idx) {
   const task = state.topicRepairState?.tasks?.[idx];
