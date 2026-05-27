@@ -2241,17 +2241,8 @@ function applyTopicPromptResult() {
     return;
   }
   if (!state.translated[key]) state.translated[key] = {};
-  const prevValue = String(state.translated[key]?.[topicId] || '').trim();
   if (topicId === 'definice' && isDefinitionLowQuality(val)) {
     showToast(t('toast.topicPrompt.definitionLowQuality'));
-    return;
-  }
-  if (hasMeaningfulValue(prevValue) && !shouldReplaceTopicValue(topicId, prevValue, val, key)) {
-    if (topicId === 'specialista') {
-      showToast(t('toast.topicPrompt.specialistNotBetter'));
-    } else {
-      showToast(t('toast.topicPrompt.fieldNotBetter', { topic: TOPIC_LABELS[topicId] || topicId }));
-    }
     return;
   }
   const prevSpecialista = String(state.translated[key]?.specialista || '').trim();
