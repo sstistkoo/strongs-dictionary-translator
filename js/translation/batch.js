@@ -14,7 +14,8 @@ import {
   shouldReplaceTopicValue,
   isBetterGenericTopicValue,
   preserveBetterTopicsAfterBatch,
-  FALLBACK_TOPIC_ORDER
+  FALLBACK_TOPIC_ORDER,
+  hasRepeatedWords
 } from './utils.js';
 import { sleepMs } from '../utils.js';
 import {
@@ -422,6 +423,7 @@ function setModelCooldown(prov, model, seconds) {
 
 function shouldAcceptTopicFallback(topicId, candidate) {
   if (!hasMeaningfulValue(candidate)) return false;
+  if (hasRepeatedWords(candidate)) return false;
   if (topicId === 'definice' && isDefinitionLowQuality(candidate)) return false;
   return true;
 }

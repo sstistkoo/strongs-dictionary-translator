@@ -41,6 +41,7 @@ export const DEF_QUALITY_CONDITION_DEFAULTS = {
   short_no_structure: true,
   length_vs_source: true,
   refs: true,
+  repeated_words: true,
 };
 
 let _defQualityCond = null;
@@ -94,6 +95,7 @@ function _countFailedTopics(translationEntry, key) {
     if (isTopicManuallyApproved(key, topicId)) continue;
     const val = String(e[topicId] || '').trim();
     if (!hasMeaningfulValue(val)) { count++; continue; }
+    if (hasRepeatedWords(val)) { count++; continue; }
     if (topicId === 'definice' && isDefinitionLowQuality(val, srcDefRaw)) count++;
   }
   return count;
@@ -102,6 +104,16 @@ function _countFailedTopics(translationEntry, key) {
 export function hasMeaningfulValue(v) {
   const s = String(v || '').trim();
   return !!s && s !== '—' && s !== '(přeskočeno)';
+}
+
+export function hasRepeatedWords(text) {
+  const tokens = String(text || '').split(/[\s,;.!?]+/).filter(w => w.length >= 3);
+  if (tokens.length < 3) return false;
+  for (let i = 0; i <= tokens.length - 3; i++) {
+    const w = tokens[i].toLowerCase();
+    if (w === tokens[i + 1].toLowerCase() && w === tokens[i + 2].toLowerCase()) return true;
+  }
+  return false;
 }
 
 /** Anglická část za „Originál:“ nesmí označit celou definici jako EN (běžné u CZ+AS dvojice). */
@@ -263,6 +275,8 @@ export function getDefinitionQualityIssues(czText, srcTextRaw) {
   if (!hasMeaningfulValue(s)) return ['empty'];
   // Vždy: UI artefakty
   if (/(🤖|✎|prompt|upravit|edit|button|klik)/i.test(s)) return ['artifact'];
+  // Vždy: opakující se slova (garbage output)
+  if (hasRepeatedWords(s)) return ['repeated_words'];
 
   const issues = [];
 

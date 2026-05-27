@@ -1,6 +1,6 @@
 import { PROVIDERS } from '../config.js';
 import { isSideFallbackAborted, sleepMsWithAbort } from '../ai/fallback.js';
-import { hasMeaningfulValue, isDefinitionLowQuality, isDefinitionLikelyEnglish, fillMissingVyznamFromSource, fillMissingKjvFromSource, annotateEnglishDefinitionsInTranslated, getDefinitionQualityIssues, getDefQualityConditions, setDefQualityCondition, DEF_QUALITY_CONDITION_DEFAULTS } from './utils.js';
+import { hasMeaningfulValue, isDefinitionLowQuality, isDefinitionLikelyEnglish, fillMissingVyznamFromSource, fillMissingKjvFromSource, annotateEnglishDefinitionsInTranslated, getDefinitionQualityIssues, getDefQualityConditions, setDefQualityCondition, DEF_QUALITY_CONDITION_DEFAULTS, hasRepeatedWords } from './utils.js';
 import { sleepMs } from '../utils.js';
 import { getResolvedSystemMessage, getResolvedDefaultPrompt } from '../aiPromptsResolve.js';
 import { t, getPromptPack } from '../i18n.js';
@@ -407,6 +407,7 @@ function fixBiblicalRefsForTask(idx) {
 const DEF_QUALITY_ISSUE_LABELS = {
   empty: 'prázdná',
   artifact: 'UI artefakt',
+  repeated_words: 'opakující se slova',
   english: 'anglický text',
   diacritics: 'nediakritický text',
   short: 'příliš krátká (bez struktury)',
@@ -560,6 +561,7 @@ const DEF_QUALITY_COND_META = [
   { key: 'diacritics',        label: 'Málo diakritiky',                 title: 'Méně než 5 % slov s diakritikou cílového jazyka (při ≥ 8 slovech)' },
   { key: 'english',           label: 'Vypadá jako anglický text',       title: 'Detekce anglických frází a vzorů Strong\'s slovníku' },
   { key: 'short_no_structure',label: '< 30 zn. bez struktury',          title: 'Méně než 30 znaků a bez čárky/závorky, nebo < 4 slova' },
+  { key: 'repeated_words',    label: 'Opakující se slova (3×)',         title: 'Stejné slovo se opakuje 3× nebo více za sebou — typický garbage output AI' },
   { key: 'empty',             label: 'Prázdná hodnota',                 title: 'Téma nemá žádnou hodnotu — vždy kontrolováno' },
 ];
 
