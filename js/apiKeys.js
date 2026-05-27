@@ -75,6 +75,7 @@ function onApiKeyProfileChange() {
     saveApiKey();
     window.restoreProviderReqCounts?.();
     window.restoreProviderTokenCounts?.();
+    window.loadProviderLimitInputs?.();
     return;
   }
   const profiles = getApiKeyProfiles(prov);
@@ -85,6 +86,7 @@ function onApiKeyProfileChange() {
   saveApiKey();
   window.restoreProviderReqCounts?.();
   window.restoreProviderTokenCounts?.();
+  window.loadProviderLimitInputs?.();
   showToast(t('toast.apiKey.activeProfile', { name: profile.name || t('apiKey.profile.unnamed') }));
 }
 

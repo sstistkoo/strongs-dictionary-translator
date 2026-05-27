@@ -5469,17 +5469,31 @@ window.orSelectNone = function() {
 
 // ── PROVIDER LIMITY ─────────────────────────────────────────────────────────
 const PROVIDER_LIMIT_KEY = 'provider_limits';
+function _groqLimitKey() { return 'provider_limits_groq_' + _activeKeyId('groq'); }
 
 function getProviderLimits() {
-  try { return JSON.parse(localStorage.getItem(PROVIDER_LIMIT_KEY) || '{}'); } catch(e) { return {}; }
+  try {
+    const limits = JSON.parse(localStorage.getItem(PROVIDER_LIMIT_KEY) || '{}');
+    const groqRaw = localStorage.getItem(_groqLimitKey());
+    if (groqRaw) limits.groq = { ...(limits.groq || {}), ...JSON.parse(groqRaw) };
+    return limits;
+  } catch(e) { return {}; }
 }
 
 window.saveProviderLimit = function(prov, type, val) {
-  const limits = getProviderLimits();
-  if (!limits[prov]) limits[prov] = {};
   const num = type === 'tokens' ? _parseTokInput(val) : parseInt(val, 10);
-  limits[prov][type] = Number.isNaN(num) ? null : num;
-  localStorage.setItem(PROVIDER_LIMIT_KEY, JSON.stringify(limits));
+  const v = Number.isNaN(num) ? null : num;
+  if (prov === 'groq') {
+    let groqLimits = {};
+    try { groqLimits = JSON.parse(localStorage.getItem(_groqLimitKey()) || '{}'); } catch(e) {}
+    groqLimits[type] = v;
+    localStorage.setItem(_groqLimitKey(), JSON.stringify(groqLimits));
+  } else {
+    const limits = getProviderLimits();
+    if (!limits[prov]) limits[prov] = {};
+    limits[prov][type] = v;
+    localStorage.setItem(PROVIDER_LIMIT_KEY, JSON.stringify(limits));
+  }
   if (type === 'tokens') {
     _updateProvTokenUI(prov, _getProvTokenCount(prov));
     // Sync modal tok input pokud je otevřený (a změna přišla z hlavního panelu)
@@ -5537,10 +5551,10 @@ function mirrorAutoLog() {
   dst.textContent = src.textContent;
 }
 
-// Req count — localStorage s denním resetem, per-klíč pro Groq
-function _groqActiveKeyId() { return localStorage.getItem('strong_apikey_active_groq') || 'default'; }
+// Req count — localStorage s denním resetem, per-klíč pro všechny providery
+function _activeKeyId(prov) { return localStorage.getItem('strong_apikey_active_' + prov) || 'default'; }
 function _provReqKey(prov) {
-  return prov === 'groq' ? 'provider_req_count_groq_' + _groqActiveKeyId() : 'provider_req_count_' + prov;
+  return 'provider_req_count_' + prov + '_' + _activeKeyId(prov);
 }
 function _todayStr() { return new Date().toISOString().slice(0, 10); }
 
@@ -5594,6 +5608,7 @@ window.incrementProviderReqCount = function(prov) {
 };
 
 window.getProviderLimits = getProviderLimits;
+window.loadProviderLimitInputs = loadProviderLimitInputs;
 
 window.resetProviderReqCounts = function() {
   ['groq', 'gemini', 'openrouter'].forEach(p => localStorage.removeItem(_provReqKey(p)));
@@ -5612,9 +5627,9 @@ window.restoreProviderReqCounts = function() {
   });
 };
 
-// Token count — localStorage s denním resetem, per-klíč pro Groq
+// Token count — localStorage s denním resetem, per-klíč pro všechny providery
 function _provTokenKey(prov) {
-  return prov === 'groq' ? 'provider_token_count_groq_' + _groqActiveKeyId() : 'provider_token_count_' + prov;
+  return 'provider_token_count_' + prov + '_' + _activeKeyId(prov);
 }
 
 function _getProvTokenCount(prov) {

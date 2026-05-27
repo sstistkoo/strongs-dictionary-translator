@@ -1609,9 +1609,7 @@ function updateTopicRepairProviderStats() {
   try {
     const limits = (typeof window !== 'undefined' && window.getProviderLimits) ? window.getProviderLimits() : {};
     const getReqCount = (prov) => {
-      const key = prov === 'groq'
-        ? 'provider_req_count_groq_' + (localStorage.getItem('strong_apikey_active_groq') || 'default')
-        : 'provider_req_count_' + prov;
+      const key = 'provider_req_count_' + prov + '_' + (localStorage.getItem('strong_apikey_active_' + prov) || 'default');
       try {
         const raw = localStorage.getItem(key);
         if (!raw) return 0;
