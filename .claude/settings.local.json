@@ -48,7 +48,12 @@
       "Bash(git checkout *)",
       "Bash(node --check strong_translator_core_new.js)",
       "Bash(node --check js/ai/call.js)",
-      "WebFetch(domain:openrouter.ai)"
+      "WebFetch(domain:openrouter.ai)",
+      "Bash(node fix_markdown_prompts.js)",
+      "Bash(node --input-type=commonjs)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('i18n/prompts.ar.json','utf8'\\)\\); console.log\\(JSON.stringify\\(d['aiPrompts.mt.preset_topic_definice_batch.template']\\)\\)\")",
+      "Bash(node --input-type=commonjs -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('i18n/prompts.ar.json','utf8'\\)\\); console.log\\(d['aiPrompts.mt.preset_topic_definice_batch.template']\\); console.log\\('---ZH---'\\); const d2=JSON.parse\\(fs.readFileSync\\('i18n/prompts.zh-cn.json','utf8'\\)\\); console.log\\(d2['aiPrompts.core.userDefault']?.slice\\(0,300\\)\\);\")",
+      "Bash(node --input-type=commonjs -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('i18n/prompts.zh-cn.json','utf8'\\)\\); console.log\\(d['aiPrompts.core.userDefault']?.slice\\(-400\\)\\);\")"
     ]
   }
 }
