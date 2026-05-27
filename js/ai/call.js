@@ -209,6 +209,7 @@ async function callAIWithRetry(provider, apiKey, model, messages) {
          const isTimeout = e?.name === 'AbortError' || msg.includes('signal is aborted') || msg.includes('timeout');
 
          if (is404) {
+           markModelBlocked(provider, m);
            const errMsg = t('ai.error.modelNotFound');
            logError('callAIWithRetry', new Error(errMsg), {
              provider, model: m, attempt: attempt + 1,
