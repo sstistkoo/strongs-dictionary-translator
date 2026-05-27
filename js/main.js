@@ -5323,6 +5323,15 @@ window.refreshOrModelRotationPanel = function(options) {
     return sb.ok - sa.ok; // při stejném poměru více úspěchů = výše
   });
 
+  // Vyčistit uložené modely které již nejsou v aktuální API nabídce
+  // (model mohl být odstraněn z OpenRouteru — bez čistění by se stále volal a vracel 404)
+  const availableIds = new Set(options.map(function(o) { return o.value; }));
+  const savedModels = getOrRotationModels();
+  const cleanedModels = savedModels.filter(function(m) { return availableIds.has(m); });
+  if (cleanedModels.length !== savedModels.length) {
+    saveOrRotationModels(cleanedModels);
+  }
+
   list.innerHTML = sortedOptions.map(function(o) {
     const s = stats[o.value] || { ok: 0, rl: 0 };
     const total = s.ok + s.rl;
