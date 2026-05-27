@@ -1258,11 +1258,13 @@ function getTopicRepairBatchPromptStorageKey(topicId) {
 }
 
 function getTopicRepairSystemPromptStorageKey(topicId) {
-  return `${TOPIC_REPAIR_BATCH_PROMPT_STORAGE_PREFIX}${topicId}${TOPIC_REPAIR_BATCH_SYSTEM_PROMPT_SUFFIX}`;
+  const lang = String(localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
+  return `${TOPIC_REPAIR_BATCH_PROMPT_STORAGE_PREFIX}${lang}_${topicId}${TOPIC_REPAIR_BATCH_SYSTEM_PROMPT_SUFFIX}`;
 }
 
 function getTopicRepairUserPromptStorageKey(topicId) {
-  return `${TOPIC_REPAIR_BATCH_PROMPT_STORAGE_PREFIX}${topicId}${TOPIC_REPAIR_BATCH_USER_PROMPT_SUFFIX}`;
+  const lang = String(localStorage.getItem('strong_target_lang') || 'cz').toLowerCase();
+  return `${TOPIC_REPAIR_BATCH_PROMPT_STORAGE_PREFIX}${lang}_${topicId}${TOPIC_REPAIR_BATCH_USER_PROMPT_SUFFIX}`;
 }
 
 function applyPromptLanguageTokens(promptText) {
