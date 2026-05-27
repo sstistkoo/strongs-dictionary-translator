@@ -1,4 +1,4 @@
-{
+﻿{
   "setup.title": "⟁ Strong GR → {lang} — Překladač slovníku",
   "setup.start": "Editor",
   "setup.help": "❓ Nápověda",
@@ -308,6 +308,9 @@
   "settings.groqTokenLimit": "Groq · Limit tokenů",
   "settings.geminiTokenLimit": "Gemini · Limit tokenů",
   "settings.openrouterTokenLimit": "OpenRouter · Limit tokenů",
+  "settings.groqTimeout": "Groq · Timeout (min)",
+  "settings.geminiTimeout": "Gemini · Timeout (min)",
+  "settings.openrouterTimeout": "OpenRouter · Timeout (min)",
   "settings.enableFixes": "zapnout opravy",
   "settings.batch": "Dávka",
   "settings.speed": "Rychlost",

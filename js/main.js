@@ -547,6 +547,9 @@ function applyUiLanguage() {
     setText('settingsGroqMaxLabel', t('settings.groqTokenLimit'));
     setText('settingsGeminiMaxLabel', t('settings.geminiTokenLimit'));
     setText('settingsOpenrouterMaxLabel', t('settings.openrouterTokenLimit'));
+    setText('settingsGroqTimeoutLabel', t('settings.groqTimeout'));
+    setText('settingsGeminiTimeoutLabel', t('settings.geminiTimeout'));
+    setText('settingsOpenrouterTimeoutLabel', t('settings.openrouterTimeout'));
     setText('settingsBatchLabel', t('settings.batch'));
     setAttr('batchSizeRunMobile', 'aria-label', t('settings.batch'));
     setAttr('batchSizeRunMobile', 'title', t('settings.batch'));

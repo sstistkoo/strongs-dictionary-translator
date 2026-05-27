@@ -53,7 +53,10 @@
       "Bash(node --input-type=commonjs)",
       "Bash(node -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('i18n/prompts.ar.json','utf8'\\)\\); console.log\\(JSON.stringify\\(d['aiPrompts.mt.preset_topic_definice_batch.template']\\)\\)\")",
       "Bash(node --input-type=commonjs -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('i18n/prompts.ar.json','utf8'\\)\\); console.log\\(d['aiPrompts.mt.preset_topic_definice_batch.template']\\); console.log\\('---ZH---'\\); const d2=JSON.parse\\(fs.readFileSync\\('i18n/prompts.zh-cn.json','utf8'\\)\\); console.log\\(d2['aiPrompts.core.userDefault']?.slice\\(0,300\\)\\);\")",
-      "Bash(node --input-type=commonjs -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('i18n/prompts.zh-cn.json','utf8'\\)\\); console.log\\(d['aiPrompts.core.userDefault']?.slice\\(-400\\)\\);\")"
+      "Bash(node --input-type=commonjs -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('i18n/prompts.zh-cn.json','utf8'\\)\\); console.log\\(d['aiPrompts.core.userDefault']?.slice\\(-400\\)\\);\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\stistko\\\\CascadeProjects\\\\strongs-dictionary-translator\" -Recurse -File)",
+      "Bash(grep -n openrouterTokenLimit C:/Users/stistko/CascadeProjects/strongs-dictionary-translator/i18n/__TRACKED_VAR__.json)",
+      "Bash(grep -A1 'openrouterTokenLimit\\\\|groqTimeout\\\\|geminiTimeout\\\\|openrouterTimeout' C:/Users/stistko/CascadeProjects/strongs-dictionary-translator/i18n/__TRACKED_VAR__.json)"
     ]
   }
 }

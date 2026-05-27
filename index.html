@@ -406,6 +406,10 @@
         </select>
       </div>
       <div class="mobl-set-row">
+        <label id="settingsGroqTimeoutLabel">Groq · Timeout (min)</label>
+        <input type="number" id="settingsTimeout_groq" min="1" max="60" step="1" placeholder="4" aria-label="Groq timeout" title="Groq timeout">
+      </div>
+      <div class="mobl-set-row">
         <label id="settingsSecondaryGeminiLabel">Sekundární model (Gemini)</label>
         <div class="model-sel-wrap">
           <select id="providerRunSecondaryGeminiModel" aria-label="Sekundární model Gemini" title="Sekundární model Gemini"></select>
@@ -425,6 +429,10 @@
         </select>
       </div>
       <div class="mobl-set-row">
+        <label id="settingsGeminiTimeoutLabel">Gemini · Timeout (min)</label>
+        <input type="number" id="settingsTimeout_gemini" min="1" max="60" step="1" placeholder="4" aria-label="Gemini timeout" title="Gemini timeout">
+      </div>
+      <div class="mobl-set-row">
         <label id="settingsSecondaryOpenrouterLabel">Sekundární model (OpenRouter)</label>
         <select id="providerRunSecondaryOpenrouterModel" aria-label="Sekundární model OpenRouter" title="Sekundární model OpenRouter"></select>
       </div>
@@ -437,6 +445,10 @@
           <option value="8192">8 192</option>
           <option value="16384">16 384</option>
         </select>
+      </div>
+      <div class="mobl-set-row">
+        <label id="settingsOpenrouterTimeoutLabel">OpenRouter · Timeout (min)</label>
+        <input type="number" id="settingsTimeout_openrouter" min="1" max="60" step="1" placeholder="4" aria-label="OpenRouter timeout" title="OpenRouter timeout">
       </div>
    <div class="prompt-actions" style="margin-top: 16px;">
      <button class="prompt-btn cancel" id="btnSettingsClose" onclick="closeSettingsModal()" aria-label="Zavřít">✕ Zavřít</button>

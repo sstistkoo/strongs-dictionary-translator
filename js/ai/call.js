@@ -303,10 +303,12 @@ function getTranslationEngineLabel(raw, fallbackProvider, fallbackModel) {
     }
   }
   let timedOut = false;
+  const savedTimeoutMin = parseInt(localStorage.getItem('strong_ai_timeout_' + provider) || '0', 10);
+  const timeoutMs = savedTimeoutMin > 0 ? savedTimeoutMin * 60000 : CONFIG.API_TIMEOUT;
   const timeout = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, CONFIG.API_TIMEOUT);
+  }, timeoutMs);
   
   // Load AI settings from localStorage (per provider with legacy fallback)
   const temperature = parseFloat(localStorage.getItem('strong_ai_temperature_' + provider) || localStorage.getItem('strong_ai_temperature') || '0.3') || 0.3;

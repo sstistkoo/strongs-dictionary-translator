@@ -1,6 +1,6 @@
 import { t, getUiLang, getDefaultContentTag, CONTENT_TAG_LANG_KEY, CONTENT_TAG_LANG_MANUAL_KEY } from '../i18n.js';
 import { safeSetLocalStorage, safeRemoveLocalStorage } from '../storage.js';
-import { BATCH_SIZE_KEY, INTERVAL_KEY, PERSONAL_PROMPT_KEY } from '../config.js';
+import { CONFIG, BATCH_SIZE_KEY, INTERVAL_KEY, PERSONAL_PROMPT_KEY } from '../config.js';
 
 export function createSettingsModalsApi({ initRunSelects, updateSetupCompactSummary, initPipelineModelSelectors, initPipelineModelSelectorsInSettingsModal, showToast, refreshTopicLabels, renderList, saveProgress, refreshLanguageAwarePromptOptionLabels, applySystemPromptForCurrentTask, applyUiLanguage, DEFAULT_UI_LANG, UI_LANGS, UI_LANG_KEY, setPipelineModelForProvider, setPipelineSecondaryEnabled, syncSecondaryProviderToggles, updateAutoProviderCountdowns, updateStats }) {
 
@@ -246,6 +246,7 @@ function getDefaultContentTagForTarget(targetRaw) {
  function showSettingsModal() {
    initPipelineModelSelectorsInSettingsModal();
   const MAX_TOKENS_DEFAULTS = { groq: 4096, gemini: 8192, openrouter: 8192 };
+  const TIMEOUT_DEFAULT = String(Math.round(CONFIG.API_TIMEOUT / 60000));
   ['groq', 'gemini', 'openrouter'].forEach(prov => {
     const saved = localStorage.getItem(`strong_ai_max_tokens_${prov}`) || String(MAX_TOKENS_DEFAULTS[prov]);
     const el = document.getElementById(`settingsMaxTokens_${prov}`);
@@ -253,6 +254,9 @@ function getDefaultContentTagForTarget(targetRaw) {
       el.value = saved;
       if (el.value !== saved) el.value = String(MAX_TOKENS_DEFAULTS[prov]);
     }
+    const savedTimeout = localStorage.getItem(`strong_ai_timeout_${prov}`) || TIMEOUT_DEFAULT;
+    const tel = document.getElementById(`settingsTimeout_${prov}`);
+    if (tel) tel.value = savedTimeout;
   });
   document.getElementById('settingsModal').classList.add('show');
 }
@@ -267,6 +271,8 @@ function closeSettingsModal() {
   ['groq', 'gemini', 'openrouter'].forEach(prov => {
     const el = document.getElementById(`settingsMaxTokens_${prov}`);
     if (el?.value) safeSetLocalStorage(`strong_ai_max_tokens_${prov}`, el.value, 'settingsModals');
+    const tel = document.getElementById(`settingsTimeout_${prov}`);
+    if (tel?.value) safeSetLocalStorage(`strong_ai_timeout_${prov}`, tel.value, 'settingsModals');
   });
    updateAutoProviderCountdowns();
    const providerEl = document.getElementById('provider');
