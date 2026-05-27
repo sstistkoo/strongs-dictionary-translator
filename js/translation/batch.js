@@ -1178,13 +1178,17 @@ async function translateBatchForProvider(allKeys, prov, apiKey, model) {
     startElapsedTimer();
   }
 
-  // Zkontrolovat request limit pro všechny providery
-  if (typeof window !== 'undefined' && window.checkProviderRequestLimit) {
-    if (window.checkProviderRequestLimit(prov)) {
+  // Zkontrolovat request i token limit pro daného providera
+  if (typeof window !== 'undefined') {
+    if (window.checkProviderRequestLimit?.(prov)) {
       log('[' + prov + '] dosažen limit požadavků — přeskakuji');
       return { ok: false, rateLimited: false, limitReached: true };
     }
-    window.incrementProviderReqCount && window.incrementProviderReqCount(prov);
+    if (window.checkProviderTokenLimit?.(prov)) {
+      log('[' + prov + '] dosažen denní limit tokenů — přeskakuji');
+      return { ok: false, rateLimited: false, limitReached: true };
+    }
+    window.incrementProviderReqCount?.(prov);
   }
 
   const reqStart = performance.now();
