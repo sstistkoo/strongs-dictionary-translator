@@ -298,11 +298,11 @@ export function getDefinitionQualityIssues(czText, srcTextRaw) {
     issues.push('length');
   }
 
-  // Toggleable: chybí biblické reference
+  // Toggleable: počet biblických referencí musí přesně souhlasit
   if (cond.refs) {
     const srcRefs = (src.match(/\d+[,:]\d+/g) || []).length;
     const czRefs  = (s.match(/\d+[,:]\d+/g) || []).length;
-    if (srcRefs > 0 && czRefs < srcRefs) issues.push('refs');
+    if (srcRefs > 0 && czRefs !== srcRefs) issues.push('refs');
   }
 
   return issues;
@@ -525,8 +525,8 @@ export function getFailedTopicsForFallback(translationEntry, key) {
   return failed;
 }
 
-export function getMissingTopicsForRepair(translationEntry) {
-   const allMissing = getFailedTopicsForFallback(translationEntry);
+export function getMissingTopicsForRepair(translationEntry, key) {
+   const allMissing = getFailedTopicsForFallback(translationEntry, key);
    return allMissing.slice(0, 2);
 }
 
@@ -553,15 +553,19 @@ export function isBetterGenericTopicValue(prev, next) {
    return false;
 }
 
-export function shouldReplaceTopicValue(topicId, previousValue, candidateValue) {
+export function shouldReplaceTopicValue(topicId, previousValue, candidateValue, key) {
    const prev = String(previousValue || '').trim();
    const next = String(candidateValue || '').trim();
    if (!hasMeaningfulValue(next)) return false;
    if (!hasMeaningfulValue(prev)) return true;
    if (topicId === 'specialista') return shouldReplaceSpecialista(prev, next);
    if (topicId === 'definice') {
-     if (isDefinitionLowQuality(next)) return false;
-     if (isDefinitionLowQuality(prev) && !isDefinitionLowQuality(next)) return true;
+     const srcEntry = key ? (state.entryMap?.get(key) || {}) : {};
+     const srcDefRaw = String(srcEntry.definice || srcEntry.def || '');
+     const nextBad = isDefinitionLowQuality(next, srcDefRaw);
+     const prevBad = isDefinitionLowQuality(prev, srcDefRaw);
+     if (nextBad) return false;
+     if (prevBad && !nextBad) return true;
      return isBetterGenericTopicValue(prev, next);
    }
    return isBetterGenericTopicValue(prev, next);
@@ -576,7 +580,7 @@ export function preserveBetterTopicsAfterBatch(keys, previousMap) {
      for (const topicId of topics) {
        const prevVal = String(previous[topicId] || '').trim();
        const curVal = String(current[topicId] || '').trim();
-       const acceptCurrent = shouldReplaceTopicValue(topicId, prevVal, curVal);
+       const acceptCurrent = shouldReplaceTopicValue(topicId, prevVal, curVal, key);
        if (!acceptCurrent && hasMeaningfulValue(prevVal)) {
          current[topicId] = prevVal;
        }

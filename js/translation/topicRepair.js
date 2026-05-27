@@ -411,7 +411,7 @@ const DEF_QUALITY_ISSUE_LABELS = {
   diacritics: 'nediakritický text',
   short: 'příliš krátká (bez struktury)',
   length: 'příliš krátká oproti zdroji',
-  refs: 'chybí biblické reference',
+  refs: 'nesouhlasí počet biblických referencí',
 };
 
 function checkDefinitionQuality(czDef, srcDefNoKjv) {
@@ -432,7 +432,7 @@ function debugTopicEntry(key) {
   const czRefs = countDefRefs(czDef);
 
   const missing = typeof getMissingTopicsForRepair === 'function'
-    ? getMissingTopicsForRepair(t)
+    ? getMissingTopicsForRepair(t, key)
     : [];
 
   const quality = checkDefinitionQuality(czDef, srcDefNoKjv);
@@ -464,7 +464,7 @@ function buildTopicRepairTasks(keys) {
   for (const key of keys) {
     const t = state.translated[key] || {};
     const e = state.entryMap.get(key) || {};
-    const missing = getMissingTopicsForRepair(t).filter(topicId => {
+    const missing = getMissingTopicsForRepair(t, key).filter(topicId => {
       // přeskočit téma pokud originál nemá zdrojový text (stejná logika jako "Originál: —" v UI)
       if (topicId === 'vyznam') return !!getTopicOriginText(key, topicId);
       return true;
@@ -555,7 +555,7 @@ function setTopicRepairProviderTopic(prov, topicId) {
 }
 
 const DEF_QUALITY_COND_META = [
-  { key: 'refs',              label: 'Chybí biblické reference',        title: 'CZ má méně biblických citací než originál' },
+  { key: 'refs',              label: 'Nesouhlasí počet ref.',           title: 'Počet biblických referencí v překladu se musí přesně shodovat s originálem (více i méně = chyba)' },
   { key: 'length_vs_source',  label: 'Příliš krátká vs. originál',      title: 'CZ kratší než 35 % délky EN zdroje (při zdroji > 200 zn.)' },
   { key: 'diacritics',        label: 'Málo diakritiky',                 title: 'Méně než 5 % slov s diakritikou cílového jazyka (při ≥ 8 slovech)' },
   { key: 'english',           label: 'Vypadá jako anglický text',       title: 'Detekce anglických frází a vzorů Strong\'s slovníku' },
@@ -565,6 +565,7 @@ const DEF_QUALITY_COND_META = [
 
 function renderDefQualityConditionsPanel() {
   const cond = getDefQualityConditions();
+  const isOpen = state.defQualCondPanelOpen || false;
   const rows = DEF_QUALITY_COND_META.map(({ key, label, title }) => {
     const checked = cond[key] !== false;
     const disabled = key === 'empty' ? 'disabled' : '';
@@ -574,12 +575,12 @@ function renderDefQualityConditionsPanel() {
     </label>`;
   }).join('');
   return `
-  <details id="defQualityCondDetails" style="background:var(--bg3);border:1px solid var(--brd);border-radius:6px;padding:8px 10px;margin:8px 0">
+  <details id="defQualityCondDetails" ${isOpen ? 'open' : ''} ontoggle="window._defQualCondPanelToggle&&window._defQualCondPanelToggle(this.open)" style="background:var(--bg3);border:1px solid var(--brd);border-radius:6px;padding:8px 10px;margin:8px 0">
     <summary style="cursor:pointer;color:var(--acc2);font-size:12px;user-select:none">⚙ Podmínky kvality definice</summary>
     <div style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:8px;padding-top:8px;border-top:1px solid var(--brd)">
       ${rows}
     </div>
-    <div style="font-size:10px;color:var(--txt3);margin-top:6px">Změny se okamžitě projeví v seznamu úloh. Odškrtnuté podmínky se netestují.</div>
+    <div style="font-size:10px;color:var(--txt3);margin-top:6px">Odškrtnuté podmínky se netestují — seznam se okamžitě přebuduje.</div>
   </details>`;
 }
 
@@ -880,7 +881,7 @@ nextTask.detectedTopics = [];
             if (primaryCandidate && candidateTopicVal === primaryCandidate) return;
             if (nextTask.detectedTopics.some(d => d.topicId === topicId)) return;
             const previousTopicVal = String(baselineTopicValues?.[topicId] || '').trim();
-            const acceptAuto = shouldAutoAcceptDetectedTopic(topicId, previousTopicVal, candidateTopicVal);
+            const acceptAuto = shouldAutoAcceptDetectedTopic(topicId, previousTopicVal, candidateTopicVal, nextTask.key);
             if (acceptAuto) {
               state.translated[nextTask.key][topicId] = candidateTopicVal;
             }
@@ -1006,14 +1007,18 @@ function toggleTopicRepairRun() {
   if (!state.paused && !state.topicRepairWorkerRunning) processTopicRepairQueue();
 }
 
-function shouldAutoAcceptDetectedTopic(topicId, previousValue, candidateValue) {
+function shouldAutoAcceptDetectedTopic(topicId, previousValue, candidateValue, key) {
   if (!hasMeaningfulValue(candidateValue)) return false;
-  if (topicId === 'definice' && isDefinitionLowQuality(candidateValue)) {
-    // Povolit krátké, jednoslovné definice s českou diakritikou (např. "dávka")
-    const words = String(candidateValue).trim().split(/\s+/).filter(Boolean);
-    const hasCzechDiacritics = /[áčďéěíňóřšťúůýž]/i.test(candidateValue);
-    if (words.length <= 2 && hasCzechDiacritics) return true;
-    return false;
+  if (topicId === 'definice') {
+    const srcEntry = key ? (state.entryMap?.get(key) || {}) : {};
+    const srcDefRaw = String(srcEntry.definice || srcEntry.def || '');
+    if (isDefinitionLowQuality(candidateValue, srcDefRaw)) {
+      // Povolit krátké, jednoslovné definice s českou diakritikou (např. "dávka")
+      const words = String(candidateValue).trim().split(/\s+/).filter(Boolean);
+      const hasCzechDiacritics = /[áčďéěíňóřšťúůýž]/i.test(candidateValue);
+      if (words.length <= 2 && hasCzechDiacritics) return true;
+      return false;
+    }
   }
   if (topicId === 'specialista') return shouldReplaceSpecialista(previousValue, candidateValue);
   return !hasMeaningfulValue(previousValue);
@@ -1227,6 +1232,7 @@ function rebuildTopicRepairTasks() {
   const keys = topicRepairState.originalKeys;
   if (!keys || !keys.length) return;
 
+  // Zachovat hotové/running/failed tasky — neresetovat jejich výsledky
   const preservedByKey = new Map();
   for (const task of topicRepairState.tasks) {
     if (task.status !== 'waiting') {
@@ -1242,6 +1248,10 @@ function rebuildTopicRepairTasks() {
 
   topicRepairState.tasks = newTasks;
   renderTopicRepairModal();
+
+  // Aktualizovat statistiky a počítadlo v hlavičce
+  if (typeof updateStats === 'function') updateStats();
+  if (typeof updateFailedCount === 'function') updateFailedCount();
 }
 
 const TOPIC_BATCH_PROMPT_PRESET_MAP = {
@@ -2236,7 +2246,7 @@ function applyTopicPromptResult() {
     showToast(t('toast.topicPrompt.definitionLowQuality'));
     return;
   }
-  if (hasMeaningfulValue(prevValue) && !shouldReplaceTopicValue(topicId, prevValue, val)) {
+  if (hasMeaningfulValue(prevValue) && !shouldReplaceTopicValue(topicId, prevValue, val, key)) {
     if (topicId === 'specialista') {
       showToast(t('toast.topicPrompt.specialistNotBetter'));
     } else {
@@ -2264,7 +2274,7 @@ function applyTopicPromptResult() {
     if (!hasMeaningfulValue(extraVal)) continue;
     if (extraTopicId === 'definice' && isDefinitionLowQuality(extraVal)) continue;
     const prevExtra = String(state.translated[key]?.[extraTopicId] || '').trim();
-    if (hasMeaningfulValue(prevExtra) && !shouldReplaceTopicValue(extraTopicId, prevExtra, extraVal)) continue;
+    if (hasMeaningfulValue(prevExtra) && !shouldReplaceTopicValue(extraTopicId, prevExtra, extraVal, key)) continue;
     state.translated[key][extraTopicId] = extraVal;
     log(`✨ DETAIL auto-merge ${key}.${extraTopicId}: aplikováno z jedné AI odpovědi`);
   }

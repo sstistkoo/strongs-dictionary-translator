@@ -4851,6 +4851,7 @@ window.translateSystemPromptText = translateSystemPromptText;
 window.toggleTopicRepairManualApproval = toggleTopicRepairManualApproval;
 window.toggleDefQualityCondition = toggleDefQualityCondition;
 window.rebuildTopicRepairTasks = rebuildTopicRepairTasks;
+window._defQualCondPanelToggle = (open) => { state.defQualCondPanelOpen = open; };
 window.translateSystemPromptBackToEnglish = translateSystemPromptBackToEnglish;
 window.reviewSystemPromptWithAI = reviewSystemPromptWithAI;
 window.buildSystemPromptFromRequirement = buildSystemPromptFromRequirement;

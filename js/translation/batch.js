@@ -48,6 +48,32 @@ export function createBatchApi(deps) {
     isAutoProviderEnabled,
     translateSelected,
   } = deps;
+
+function logRefsMismatchForKeys(keys) {
+  const list = Array.isArray(keys) ? keys : [];
+  let mismatchCount = 0;
+  const samples = [];
+  for (const key of list) {
+    const tr = state.translated[key];
+    if (!tr) continue;
+    const czDef = String(tr.definice || '').trim();
+    if (!czDef) continue;
+    const e = state.entryMap?.get(key) || {};
+    const srcDef = String(e.definice || e.def || '').replace(/\s*\|\s*KJV:[^|]*/gi, '').trim();
+    if (!srcDef) continue;
+    const srcRefs = (srcDef.match(/\d+[,:]\d+/g) || []).length;
+    if (srcRefs === 0) continue;
+    const czRefs = (czDef.match(/\d+[,:]\d+/g) || []).length;
+    if (czRefs !== srcRefs) {
+      mismatchCount++;
+      if (samples.length < 5) samples.push(`${key}(${czRefs}/${srcRefs})`);
+    }
+  }
+  if (mismatchCount > 0) {
+    log(`⚠ Nesouhlasí počet biblických referencí u ${mismatchCount} hesel — retry přes fallback. Příklady: ${samples.join(', ')}${mismatchCount > samples.length ? '…' : ''}`);
+  }
+}
+
 function formatPreviewRawTranslation(rawDef) {
   const text = String(rawDef || '').trim();
   if (!text) return '�';
@@ -781,6 +807,7 @@ async function translateBatch(keys, depth = 0) {
     fillMissingVyznamFromSource(keys);
     fillMissingKjvFromSource(keys);
     annotateEnglishDefinitionsInTranslated(keys);
+    logRefsMismatchForKeys(keys);
     
     // Log tokenu
     const usage = raw.usage || raw.usageMetadata;
@@ -1174,6 +1201,7 @@ async function translateBatchForProvider(allKeys, prov, apiKey, model) {
     fillMissingVyznamFromSource(keys);
     fillMissingKjvFromSource(keys);
     annotateEnglishDefinitionsInTranslated(keys);
+    logRefsMismatchForKeys(keys);
 
     // Token log
     const usage = raw.usage || raw.usageMetadata;
