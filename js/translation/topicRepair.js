@@ -1,11 +1,10 @@
 import { PROVIDERS } from '../config.js';
 import { isSideFallbackAborted, sleepMsWithAbort } from '../ai/fallback.js';
-import { hasMeaningfulValue, isDefinitionLowQuality, isDefinitionLikelyEnglish, fillMissingVyznamFromSource, fillMissingKjvFromSource, annotateEnglishDefinitionsInTranslated } from './utils.js';
+import { hasMeaningfulValue, isDefinitionLowQuality, isDefinitionLikelyEnglish, fillMissingVyznamFromSource, fillMissingKjvFromSource, annotateEnglishDefinitionsInTranslated, getDefinitionQualityIssues, getDefQualityConditions, setDefQualityCondition, DEF_QUALITY_CONDITION_DEFAULTS } from './utils.js';
 import { sleepMs } from '../utils.js';
 import { getResolvedSystemMessage, getResolvedDefaultPrompt } from '../aiPromptsResolve.js';
 import { t, getPromptPack } from '../i18n.js';
 import { convertBiblicalAbbreviations } from '../biblicalAbbreviations.js';
-import { getLangDiacriticRe } from '../languageChars.js';
 
 function getDefaultBatchTopicSystemPrompt(topicId) {
     // Vždy použijeme univerzální core system prompt pro všechny scénáře
@@ -405,37 +404,19 @@ function fixBiblicalRefsForTask(idx) {
  * Vrací { ok: bool, issues: string[] }
  * ok = true → překlad vypadá dobře, nevkládat do fronty oprav
  */
+const DEF_QUALITY_ISSUE_LABELS = {
+  empty: 'prázdná',
+  artifact: 'UI artefakt',
+  english: 'anglický text',
+  diacritics: 'nediakritický text',
+  short: 'příliš krátká (bez struktury)',
+  length: 'příliš krátká oproti zdroji',
+  refs: 'chybí biblické reference',
+};
+
 function checkDefinitionQuality(czDef, srcDefNoKjv) {
-  const issues = [];
-  const s = String(czDef || '').trim();
-  const src = String(srcDefNoKjv || '').trim();
-
-  // 1. Diakritika / specifické znaky cílového jazyka — detekce nepřeloženého textu.
-  // Pro jazyky bez diakritiky (en) getLangCharSet vrátí null a kontrola se přeskočí.
-  const targetLang = String(localStorage.getItem('strong_target_lang') || 'cs').toLowerCase();
-  const diacriticRe = getLangDiacriticRe(targetLang);
-
-  const czWords = s.split(/\s+/).filter(Boolean);
-  if (diacriticRe && czWords.length >= 8) {
-    const withDiacritics = czWords.filter(w => diacriticRe.test(w)).length;
-    const ratio = withDiacritics / czWords.length;
-    if (ratio < 0.05) {
-      issues.push(`nediakritický text (${withDiacritics}/${czWords.length} slov = ${Math.round(ratio * 100)} %)`);
-    }
-  }
-
-  // 2. Velikost — CZ příliš krátký oproti EN zdroji
-  if (src.length > 200 && s.length < src.length * 0.35) {
-    issues.push(`příliš krátký (CZ: ${s.length} zn., EN: ${src.length} zn., limit: ${Math.round(src.length * 0.35)} zn.)`);
-  }
-
-  // 3. Biblické reference — CZ má méně refs než EN zdroj
-  const srcRefs = countDefRefs(src);
-  const czRefs  = countDefRefs(s);
-  if (srcRefs > 0 && czRefs < srcRefs) {
-    issues.push(`chybí refs (CZ: ${czRefs}, EN: ${srcRefs})`);
-  }
-
+  const issueKeys = getDefinitionQualityIssues(czDef, srcDefNoKjv);
+  const issues = issueKeys.map(k => DEF_QUALITY_ISSUE_LABELS[k] || k);
   return { ok: issues.length === 0, issues };
 }
 
@@ -573,6 +554,35 @@ function setTopicRepairProviderTopic(prov, topicId) {
   localStorage.setItem('tr_providerTopic_' + prov, topicId);
 }
 
+const DEF_QUALITY_COND_META = [
+  { key: 'refs',              label: 'Chybí biblické reference',        title: 'CZ má méně biblických citací než originál' },
+  { key: 'length_vs_source',  label: 'Příliš krátká vs. originál',      title: 'CZ kratší než 35 % délky EN zdroje (při zdroji > 200 zn.)' },
+  { key: 'diacritics',        label: 'Málo diakritiky',                 title: 'Méně než 5 % slov s diakritikou cílového jazyka (při ≥ 8 slovech)' },
+  { key: 'english',           label: 'Vypadá jako anglický text',       title: 'Detekce anglických frází a vzorů Strong\'s slovníku' },
+  { key: 'short_no_structure',label: '< 30 zn. bez struktury',          title: 'Méně než 30 znaků a bez čárky/závorky, nebo < 4 slova' },
+  { key: 'empty',             label: 'Prázdná hodnota',                 title: 'Téma nemá žádnou hodnotu — vždy kontrolováno' },
+];
+
+function renderDefQualityConditionsPanel() {
+  const cond = getDefQualityConditions();
+  const rows = DEF_QUALITY_COND_META.map(({ key, label, title }) => {
+    const checked = cond[key] !== false;
+    const disabled = key === 'empty' ? 'disabled' : '';
+    return `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap" title="${escHtml(title)}">
+      <input type="checkbox" ${checked ? 'checked' : ''} ${disabled} onchange="toggleDefQualityCondition('${key}', this.checked)" style="accent-color:var(--acc)">
+      <span style="font-size:11px;color:var(--txt2)">${escHtml(label)}</span>
+    </label>`;
+  }).join('');
+  return `
+  <details id="defQualityCondDetails" style="background:var(--bg3);border:1px solid var(--brd);border-radius:6px;padding:8px 10px;margin:8px 0">
+    <summary style="cursor:pointer;color:var(--acc2);font-size:12px;user-select:none">⚙ Podmínky kvality definice</summary>
+    <div style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:8px;padding-top:8px;border-top:1px solid var(--brd)">
+      ${rows}
+    </div>
+    <div style="font-size:10px;color:var(--txt3);margin-top:6px">Změny se okamžitě projeví v seznamu úloh. Odškrtnuté podmínky se netestují.</div>
+  </details>`;
+}
+
 function renderTopicRepairModal() {
   const topicRepairState = state.topicRepairState;
   if (!topicRepairState) return;
@@ -619,6 +629,7 @@ function renderTopicRepairModal() {
           <button class="hbtn" onclick="closeTopicRepairModalOnly()">${t('topicRepair.modal.closeWindow')}</button>
         </div>
       </div>
+      ${renderDefQualityConditionsPanel()}
       <div style="font-size:11px;color:var(--txt2);margin:8px 0 10px 0">${t('topicRepair.modal.missingHint')}</div>
       <div style="background:var(--bg3);border:1px solid var(--brd);border-radius:6px;padding:10px;margin-bottom:10px">
         <div id="topicRepairStatus" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--txt3)">—</div>
@@ -751,6 +762,7 @@ function startTopicRepairFlow(keys) {
   state.paused = true;
   state.topicRepairState = {
     tasks,
+    originalKeys: [...keys],
     paused: true,
     repairStrategy: 'sequential',
     sequentialEverStarted: false,
@@ -1153,7 +1165,7 @@ function applyTopicRepairSelected() {
     }
   } else {
     const keysInModal = [...new Set(topicRepairState.tasks.map(t => t.key))];
-    const allTopicsOk = keysInModal.every(k => getFailedTopicsForFallback(state.translated[k] || {}).length === 0);
+    const allTopicsOk = keysInModal.every(k => getFailedTopicsForFallback(state.translated[k] || {}, k).length === 0);
     if (allTopicsOk) {
       showToast(t('toast.topic.overwrittenAndClosing', { count: applied }));
       stopTopicRepairTicker();
@@ -1204,6 +1216,33 @@ function toggleShowApproved() {
   updateTopicRepairModalUI();
 }
 
+function toggleDefQualityCondition(condKey, value) {
+  setDefQualityCondition(condKey, value);
+  rebuildTopicRepairTasks();
+}
+
+function rebuildTopicRepairTasks() {
+  const topicRepairState = state.topicRepairState;
+  if (!topicRepairState) return;
+  const keys = topicRepairState.originalKeys;
+  if (!keys || !keys.length) return;
+
+  const preservedByKey = new Map();
+  for (const task of topicRepairState.tasks) {
+    if (task.status !== 'waiting') {
+      preservedByKey.set(`${task.key}:${task.topicId}`, task);
+    }
+  }
+
+  const newTasks = buildTopicRepairTasks(keys);
+  for (const task of newTasks) {
+    const k = `${task.key}:${task.topicId}`;
+    if (preservedByKey.has(k)) Object.assign(task, preservedByKey.get(k));
+  }
+
+  topicRepairState.tasks = newTasks;
+  renderTopicRepairModal();
+}
 
 const TOPIC_BATCH_PROMPT_PRESET_MAP = {
   vyznam: 'preset_topic_vyznam_batch',
@@ -1603,7 +1642,7 @@ function updateTopicRepairProviderStats() {
 }
 
 async function runTopicRepairBulkTranslationCore(state, topicId, systemPrompt, userPromptTemplate, onlyFailed, bs, providerFilter = null) {
-  let tasks = state.topicRepairState.tasks.filter(t => t && t.topicId === topicId && t.includeBulk !== false);
+  let tasks = state.topicRepairState.tasks.filter(t => t && t.topicId === topicId && t.includeBulk !== false && !t.hidden);
   let picked;
   if (onlyFailed) {
     picked = tasks.filter(t => t.status === 'failed' || !hasMeaningfulValue(t.candidateValue));
@@ -3280,5 +3319,8 @@ syncTopicPromptTemplatesReport,
      downloadTopicRepairTxt,
      debugTopicEntry,
      checkDefinitionQuality,
+     loadTopicRepairManualApprovals,
+     toggleDefQualityCondition,
+     rebuildTopicRepairTasks,
    };
 }

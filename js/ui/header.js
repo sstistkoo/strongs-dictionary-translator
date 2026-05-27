@@ -2,7 +2,7 @@
  * Hlavička / statistiky / timer / log panel.
  * Deps: state, t, getTranslationStateForKey, storeKey, backupKey
  */
-import { isTranslationComplete, hasMeaningfulValue, isDefinitionLowQuality } from '../translation/utils.js';
+import { isTranslationComplete, hasMeaningfulValue, isDefinitionLowQuality, getDefinitionQualityIssues } from '../translation/utils.js';
 export function createHeaderApi({ state, t, getTranslationStateForKey, storeKey, backupKey }) {
   function logMsg(msg, type) {
     const scroll = document.getElementById('logScroll');
@@ -112,18 +112,12 @@ export function createHeaderApi({ state, t, getTranslationStateForKey, storeKey,
            if (topicId === 'definice' && isDefinitionLowQuality(val)) topicRepairTaskCount++;
          }
        }
-       // Kontrola kvality definice (refs, zkráceno) — pro všechna přeložená hesla
+       // Kontrola kvality definice — unified podmínky (refs, délka, diakritika…)
        const czDef = String(tr.definice || '').trim();
        if (!hasMeaningfulValue(czDef) || isMissingTopic) continue;
        const e = state.entryMap?.get(key) || {};
        const enDef = String(e.definice || e.def || '').trim();
-       if (!enDef) continue;
-       const enRefs = enDef.match(/\d+:\d+/g) || [];
-       if (enRefs.length > 0) {
-         const czRefs = new Set(czDef.match(/\d+:\d+/g) || []);
-         if (enRefs.some(r => !czRefs.has(r))) { defQualityKeys.add(key); continue; }
-       }
-       if (enDef.length > 200 && czDef.length < enDef.length * 0.35) defQualityKeys.add(key);
+       if (getDefinitionQualityIssues(czDef, enDef).length > 0) defQualityKeys.add(key);
      }
      topicRepairTaskCount += defQualityKeys.size;
      state._defQualityKeys = defQualityKeys;

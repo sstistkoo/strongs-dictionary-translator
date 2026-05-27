@@ -99,11 +99,13 @@ import { createListApi } from './ui/list.js';
      tryNormalizeNumberedOpenRouterResponse,
      getTranslationStateForKey as getState,
      fillMissingVyznamFromSource, fillMissingKjvFromSource, annotateEnglishDefinitionsInTranslated,
-     applyFallbacksToParsedMap, parseWithOpenRouterNormalization
+     applyFallbacksToParsedMap, parseWithOpenRouterNormalization,
+     setDefQualityCondition, getDefQualityConditions, getDefinitionQualityIssues,
    } from './translation/utils.js';
   // Expose cache invalidation for other modules
 window.invalidateTranslationStateCache = invalidateTranslationStateCache;
 window.invalidateTargetLangCache = invalidateTargetLangCache;
+window.setDefQualityCondition = setDefQualityCondition;
 
 // Re-export for use in this module
 const {
@@ -1669,6 +1671,7 @@ async function initApp(loadingEl) {
   window._entryIndexMap = new Map(state.entries.map((e, i) => [e.key, i]));
 
   state.filteredKeys = state.entries.map(e => e.key);
+  loadTopicRepairManualApprovals();
   precomputeTranslationStates();
   initVirtualScroll();
   renderList();
@@ -1988,6 +1991,9 @@ const {
   downloadTopicRepairTxt,
   debugTopicEntry,
   checkDefinitionQuality,
+  loadTopicRepairManualApprovals,
+  toggleDefQualityCondition,
+  rebuildTopicRepairTasks,
 } = topicRepairApi;
 
 // -- LIMITS + PREVIEW API ----------------------------------------
@@ -4843,6 +4849,8 @@ window.runSystemPromptConfirm = runSystemPromptConfirm;
 window.closeSystemPromptModal = closeSystemPromptModal;
 window.translateSystemPromptText = translateSystemPromptText;
 window.toggleTopicRepairManualApproval = toggleTopicRepairManualApproval;
+window.toggleDefQualityCondition = toggleDefQualityCondition;
+window.rebuildTopicRepairTasks = rebuildTopicRepairTasks;
 window.translateSystemPromptBackToEnglish = translateSystemPromptBackToEnglish;
 window.reviewSystemPromptWithAI = reviewSystemPromptWithAI;
 window.buildSystemPromptFromRequirement = buildSystemPromptFromRequirement;

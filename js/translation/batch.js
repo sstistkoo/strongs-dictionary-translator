@@ -589,7 +589,7 @@ async function runParallelTopicFallback(keys, abortVersion) {
   await Promise.all(keyList.map(async (key) => {
     if (isSideFallbackAborted(abortVersion)) return;
     const t = state.translated[key] || {};
-    const failedTopics = getFailedTopicsForFallback(t);
+    const failedTopics = getFailedTopicsForFallback(t, key);
     if (!failedTopics.length) return;
      await Promise.all(failedTopics.map(async (topicId) => {
        if (isSideFallbackAborted(abortVersion)) return;
@@ -845,7 +845,7 @@ async function translateBatch(keys, depth = 0) {
             const filteredKeys = keysBeforeSideFallback.filter(k => {
               const entry = state.translated[k];
               if (!entry) return false;
-              const failed = getFailedTopicsForFallback(entry);
+              const failed = getFailedTopicsForFallback(entry, k);
               if (failed.length < 3) return false;
               const repairCount = entry.openrouterRepairCount || 0;
               if (repairCount >= 2) return false;
@@ -993,7 +993,7 @@ async function runGeminiTopicRotationFallback(keys, abortVersion) {
   const topicMap = new Map();
   for (const key of keys) {
     const t = state.translated[key] || {};
-    const failed = getFailedTopicsForFallback(t);
+    const failed = getFailedTopicsForFallback(t, key);
     for (const topicId of failed) {
       if (!topicMap.has(topicId)) topicMap.set(topicId, []);
       topicMap.get(topicId).push(key);

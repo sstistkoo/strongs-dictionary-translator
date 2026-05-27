@@ -1,7 +1,7 @@
 // js/translation/utils.js — pomocné funkce pro překlad
 // Importováno přímo v batch.js, detail.js, list.js, header.js
 import { state } from '../state.js';
-import { getLangCharSetOrAny } from '../languageChars.js';
+import { getLangCharSetOrAny, getLangDiacriticRe } from '../languageChars.js';
 import core from '../../strong_translator_core_new.js';
 
 const { parseTranslations: parseTranslationsCore } = core;
@@ -32,6 +32,41 @@ export function invalidateTargetLangCache() {
   invalidateTranslationStateCache();
 }
 
+// --- Podmínky kvality definice ---
+const DEF_QUALITY_CONDITIONS_KEY = 'strong_def_quality_cond_v1';
+export const DEF_QUALITY_CONDITION_DEFAULTS = {
+  empty: true,
+  english: true,
+  diacritics: true,
+  short_no_structure: true,
+  length_vs_source: true,
+  refs: true,
+};
+
+let _defQualityCond = null;
+
+export function getDefQualityConditions() {
+  if (!_defQualityCond) {
+    try {
+      const s = localStorage.getItem(DEF_QUALITY_CONDITIONS_KEY);
+      _defQualityCond = s
+        ? { ...DEF_QUALITY_CONDITION_DEFAULTS, ...JSON.parse(s) }
+        : { ...DEF_QUALITY_CONDITION_DEFAULTS };
+    } catch {
+      _defQualityCond = { ...DEF_QUALITY_CONDITION_DEFAULTS };
+    }
+  }
+  return _defQualityCond;
+}
+
+export function setDefQualityCondition(condKey, value) {
+  const c = getDefQualityConditions();
+  c[condKey] = !!value;
+  _defQualityCond = { ...c };
+  try { localStorage.setItem(DEF_QUALITY_CONDITIONS_KEY, JSON.stringify(c)); } catch {}
+  invalidateTranslationStateCache();
+}
+
 // Cache stavů překladu — přepočítává se jen při změně state.translated
 let _stateCache = null;
 
@@ -52,12 +87,14 @@ function isTopicManuallyApproved(key, topicId) {
 
 function _countFailedTopics(translationEntry, key) {
   const e = translationEntry || {};
+  const srcEntry = key ? (state.entryMap?.get(key) || {}) : {};
+  const srcDefRaw = String(srcEntry.definice || srcEntry.def || '');
   let count = 0;
   for (const topicId of _FALLBACK_TOPIC_ORDER) {
     if (isTopicManuallyApproved(key, topicId)) continue;
     const val = String(e[topicId] || '').trim();
     if (!hasMeaningfulValue(val)) { count++; continue; }
-    if (topicId === 'definice' && isDefinitionLowQuality(val)) count++;
+    if (topicId === 'definice' && isDefinitionLowQuality(val, srcDefRaw)) count++;
   }
   return count;
 }
@@ -213,35 +250,81 @@ export function isDefinitionLikelyEnglish(text) {
   return EN_TEXT_MARKERS.some(re => re.test(s));
 }
 
-export function isDefinitionLowQuality(text) {
-  const s = String(text || '').trim();
-  if (!s) return true;
-  const langChars = _getCachedLangChars();
-  // Fast path: dostatečně dlouhá definice s cílovým jazykem → přeskočit drahé English kontroly
-  if (s.length >= 30 && langChars.test(s) && !/(🤖|✎|prompt|upravit|edit|button|klik)/i.test(s)) return false;
-  if (isDefinitionLikelyEnglish(s)) return true;
-  // UI artefakty nebo technický šum místo definice.
-  if (/(🤖|✎|prompt|upravit|edit|button|klik)/i.test(s)) return true;
-  // Definice má být věcná; krátké, ale smysluplné formulace nechceme trestat.
-  const words = s.split(/\s+/).filter(Boolean);
-  const hasStructure = /[,:;()]/.test(s);
-  const hasTargetLangChars = langChars.test(s);
-  // Povolit 1–2 slova, pokud obsahují znaky cílového jazyka
-  if (words.length <= 2 && hasTargetLangChars) return false;
-  if (words.length < 4) return true;
-  if (s.length < 30 && !hasStructure) return true;
-  if (words.length < 6 && s.length < 45 && !hasStructure && !hasTargetLangChars) return true;
-  return false;
+function _stripKjvFromSource(text) {
+  return String(text || '').replace(/\s*\|\s*KJV:[^|]*/gi, '').trim();
+}
+
+export function getDefinitionQualityIssues(czText, srcTextRaw) {
+  const cond = getDefQualityConditions();
+  const s = String(czText || '').trim();
+  const src = _stripKjvFromSource(srcTextRaw);
+
+  // Vždy: prázdná hodnota
+  if (!hasMeaningfulValue(s)) return ['empty'];
+  // Vždy: UI artefakty
+  if (/(🤖|✎|prompt|upravit|edit|button|klik)/i.test(s)) return ['artifact'];
+
+  const issues = [];
+
+  // Toggleable: vypadá jako anglický text
+  if (cond.english && isDefinitionLikelyEnglish(s)) issues.push('english');
+
+  // Toggleable: diakritika (jazykově-aware)
+  if (cond.diacritics) {
+    const diacriticRe = getLangDiacriticRe(_getCachedTargetLang());
+    if (diacriticRe) {
+      const words = s.split(/\s+/).filter(Boolean);
+      if (words.length >= 8) {
+        const withDiacr = words.filter(w => diacriticRe.test(w)).length;
+        if (withDiacr / words.length < 0.05) issues.push('diacritics');
+      }
+    }
+  }
+
+  // Toggleable: krátká bez struktury
+  if (cond.short_no_structure) {
+    const words = s.split(/\s+/).filter(Boolean);
+    const hasStructure = /[,:;()]/.test(s);
+    const hasTargetLangChars = _getCachedLangChars().test(s);
+    if (!(words.length <= 2 && hasTargetLangChars)) {
+      if (words.length < 4) issues.push('short');
+      else if (s.length < 30 && !hasStructure) issues.push('short');
+      else if (words.length < 6 && s.length < 45 && !hasStructure && !hasTargetLangChars) issues.push('short');
+    }
+  }
+
+  // Toggleable: příliš krátká oproti zdroji
+  if (cond.length_vs_source && src.length > 200 && s.length < src.length * 0.35) {
+    issues.push('length');
+  }
+
+  // Toggleable: chybí biblické reference
+  if (cond.refs) {
+    const srcRefs = (src.match(/\d+[,:]\d+/g) || []).length;
+    const czRefs  = (s.match(/\d+[,:]\d+/g) || []).length;
+    if (srcRefs > 0 && czRefs < srcRefs) issues.push('refs');
+  }
+
+  return issues;
+}
+
+export function isDefinitionLowQuality(czText, srcTextRaw) {
+  return getDefinitionQualityIssues(czText, srcTextRaw).length > 0;
 }
 
 export function isTranslationComplete(t, key) {
   if (!t || t.skipped) return false;
-  const required = ['definice', 'puvod', 'kjv', 'specialista'];
+  const required = ['definice', 'vyznam', 'puvod', 'kjv', 'specialista'];
+  const e = key ? (state.entryMap?.get(key) || {}) : {};
   for (const field of required) {
     if (isTopicManuallyApproved(key, field)) continue;
+    if (field === 'vyznam' && !hasMeaningfulValue(String(e.vyznamCz || e.cz || ''))) continue;
     const val = String(t[field] || '').trim();
     if (!hasMeaningfulValue(val)) return false;
-    if (field === 'definice' && isDefinitionLowQuality(val)) return false;
+    if (field === 'definice') {
+      const srcDefRaw = String(e.definice || e.def || '');
+      if (isDefinitionLowQuality(val, srcDefRaw)) return false;
+    }
   }
   return true;
 }
@@ -423,16 +506,19 @@ export function isTopicValueProblematic(key, topicId, value, translatedEntry) {
   return null;
 }
 
-export function getFailedTopicsForFallback(translationEntry) {
+export function getFailedTopicsForFallback(translationEntry, key) {
   const t = translationEntry || {};
+  const srcEntry = key ? (state.entryMap?.get(key) || {}) : {};
+  const srcDefRaw = String(srcEntry.definice || srcEntry.def || '');
   const failed = [];
   for (const topicId of _FALLBACK_TOPIC_ORDER) {
+    if (key && isTopicManuallyApproved(key, topicId)) continue;
     const val = String(t[topicId] || '').trim();
     if (!hasMeaningfulValue(val)) {
       failed.push(topicId);
       continue;
     }
-    if (topicId === 'definice' && isDefinitionLowQuality(val)) {
+    if (topicId === 'definice' && isDefinitionLowQuality(val, srcDefRaw)) {
       failed.push(topicId);
     }
   }
